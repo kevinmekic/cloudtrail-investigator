@@ -1,0 +1,917 @@
+{
+  "schema_version": 1,
+  "generated_by": "scripts/build_labels.py --refresh-sources",
+  "stratus_red_team": {
+    "repository": "https://github.com/DataDog/stratus-red-team",
+    "license": "Apache-2.0",
+    "behaviour": {
+      "version": "v2.8.0",
+      "commit": "53140a3c689896da90d37f2785ee55aa49bb46c4"
+    },
+    "mappings": {
+      "version": "v2.37.0",
+      "commit": "338bc60ca82388b7b09e662795ba2e9253132546"
+    },
+    "manual_additions": {
+      "calls": {
+        "aws.initial-access.console-login-without-mfa": {
+          "detonate": [
+            "signin:ConsoleLogin"
+          ]
+        }
+      },
+      "identifiers": {
+        "aws.persistence.iam-create-admin-user": [
+          "malicious-iam-user"
+        ]
+      }
+    },
+    "cloudtrail_event_names": {
+      "s3:PutBucketLifecycleConfiguration": "s3:PutBucketLifecycle"
+    },
+    "techniques": {
+      "aws.credential-access.ec2-get-password-data": {
+        "source_path": "v2/internal/attacktechniques/aws/credential-access/ec2-get-password-data/main.go",
+        "attack_tactics": [
+          "credential-access"
+        ],
+        "description": "Runs ec2:GetPasswordData from a role that does not have permission to do so. This simulates an attacker attempting to\nretrieve RDP passwords on a high number of Windows EC2 instances.\n\nSee https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_GetPasswordData.html\n\nWarm-up: \n\n- Create an IAM role without permissions to run ec2:GetPasswordData\n\nDetonation: \n\n- Assume the role \n- Run a number of ec2:GetPasswordData calls (which will be denied) using fictitious instance IDs",
+        "detonate_calls": [
+          "ec2:GetPasswordData"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-ec2-get-password-data"
+        ],
+        "stated_techniques": []
+      },
+      "aws.credential-access.ec2-steal-instance-credentials": {
+        "source_path": "v2/internal/attacktechniques/aws/credential-access/ec2-steal-instance-credentials/main.go",
+        "attack_tactics": [
+          "credential-access"
+        ],
+        "description": "Simulates the theft of EC2 instance credentials from the Instance Metadata Service.\n\nWarm-up:\n\n- Create the prerequisite EC2 instance and VPC (takes a few minutes).\n\nDetonation:\n\n- Execute a SSM command on the instance to retrieve temporary credentials\n- Use these credentials locally (outside the instance) to run the following commands:\n\t- sts:GetCallerIdentity\n\t- ec2:DescribeInstances",
+        "detonate_calls": [
+          "ec2:DescribeInstances",
+          "ssm:DescribeInstanceInformation",
+          "ssm:GetCommandInvocation",
+          "ssm:SendCommand",
+          "sts:GetCallerIdentity"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-ec2-steal-credentials"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1552.005",
+            "name": "Unsecured Credentials: Cloud Instance Metadata API"
+          }
+        ]
+      },
+      "aws.credential-access.secretsmanager-retrieve-secrets": {
+        "source_path": "v2/internal/attacktechniques/aws/credential-access/secretsmanager-retrieve-secrets/main.go",
+        "attack_tactics": [
+          "credential-access"
+        ],
+        "description": "Retrieves a high number of Secrets Manager secrets, through secretsmanager:GetSecretValue.\n\nWarm-up: \n\n- Create multiple secrets in Secrets Manager.\n\nDetonation: \n\n- Enumerate the secrets through secretsmanager:ListSecrets\n- Retrieve each secret value, one by one through secretsmanager:GetSecretValue",
+        "detonate_calls": [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:ListSecrets"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-retrieve-secret"
+        ],
+        "stated_techniques": []
+      },
+      "aws.credential-access.ssm-retrieve-securestring-parameters": {
+        "source_path": "v2/internal/attacktechniques/aws/credential-access/ssm-retrieve-securestring-parameters/main.go",
+        "attack_tactics": [
+          "credential-access"
+        ],
+        "description": "Retrieves and decrypts a high number (30) of SSM Parameters available in an AWS region.\n\nWarm-up: \n\n- Create multiple SSM Parameters\n\nDetonation: \n\n- Use ssm:DescribeParameters to list SSM Parameters in the current region\n- Use ssm:GetParameters by batch of 10 (maximal supported value) to retrieve the values of the SSM Parameters",
+        "detonate_calls": [
+          "ssm:DescribeParameters",
+          "ssm:GetParameters"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "/credentials/stratus-red-team",
+          "/credentials/stratus-red-team/"
+        ],
+        "stated_techniques": []
+      },
+      "aws.defense-evasion.cloudtrail-delete": {
+        "source_path": "v2/internal/attacktechniques/aws/defense-evasion/cloudtrail-delete/main.go",
+        "attack_tactics": [
+          "defense-evasion"
+        ],
+        "description": "Delete a CloudTrail trail. Simulates an attacker disrupting CloudTrail logging.\n\nWarm-up: \n\n- Create a CloudTrail trail.\n\nDetonation: \n\n- Delete the CloudTrail trail.",
+        "detonate_calls": [
+          "cloudtrail:DeleteTrail"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-cloudtraild"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1562.008",
+            "name": "Impair Defenses: Disable Cloud Logs"
+          }
+        ]
+      },
+      "aws.defense-evasion.cloudtrail-event-selectors": {
+        "source_path": "v2/internal/attacktechniques/aws/defense-evasion/cloudtrail-event-selectors/main.go",
+        "attack_tactics": [
+          "defense-evasion"
+        ],
+        "description": "Disrupt CloudTrail Logging by creating an event selector on the Trail, filtering out all management events.\n\nReference: https://github.com/RhinoSecurityLabs/Cloud-Security-Research/tree/master/AWS/cloudtrail_guardduty_bypass\n\nWarm-up: \n\n- Create a CloudTrail trail.\n\nDetonation: \n\n- Create a CloudTrail event selector to disable management events, through cloudtrail:PutEventSelectors",
+        "detonate_calls": [
+          "cloudtrail:PutEventSelectors"
+        ],
+        "revert_calls": [
+          "cloudtrail:PutEventSelectors"
+        ],
+        "identifiers": [
+          "stratus-red-team-ctes"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1562.008",
+            "name": "Impair Defenses: Disable Cloud Logs"
+          }
+        ]
+      },
+      "aws.defense-evasion.cloudtrail-lifecycle-rule": {
+        "source_path": "v2/internal/attacktechniques/aws/defense-evasion/cloudtrail-lifecycle-rule/main.go",
+        "attack_tactics": [
+          "defense-evasion"
+        ],
+        "description": "Set a 1-day retention policy on the S3 bucket used by a CloudTrail Trail, using a S3 Lifecycle Rule.\n\nReferences: https://www.justice.gov/usao-sdny/press-release/file/1452706/download\n\nWarm-up: \n\n- Create a CloudTrail trail logging to a S3 bucket.\n\nDetonation: \n\n- Apply a S3 Lifecycle Rule automatically removing objects after 1 day.",
+        "detonate_calls": [
+          "s3:PutBucketLifecycleConfiguration"
+        ],
+        "revert_calls": [
+          "s3:DeleteBucketLifecycle"
+        ],
+        "identifiers": [
+          "stratus-red-team-ctlr"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1562.008",
+            "name": "Impair Defenses: Disable Cloud Logs"
+          }
+        ]
+      },
+      "aws.defense-evasion.cloudtrail-stop": {
+        "source_path": "v2/internal/attacktechniques/aws/defense-evasion/cloudtrail-stop/main.go",
+        "attack_tactics": [
+          "defense-evasion"
+        ],
+        "description": "Stops a CloudTrail Trail from logging. Simulates an attacker disrupting CloudTrail logging.\n\nWarm-up: \n\n- Create a CloudTrail Trail.\n\nDetonation: \n\n- Call cloudtrail:StopLogging to stop CloudTrail logging.",
+        "detonate_calls": [
+          "cloudtrail:StopLogging"
+        ],
+        "revert_calls": [
+          "cloudtrail:StartLogging"
+        ],
+        "identifiers": [
+          "stratus-red-team-ct-stop"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1562.008",
+            "name": "Impair Defenses: Disable Cloud Logs"
+          }
+        ]
+      },
+      "aws.defense-evasion.organizations-leave": {
+        "source_path": "v2/internal/attacktechniques/aws/defense-evasion/organizations-leave/main.go",
+        "attack_tactics": [
+          "defense-evasion"
+        ],
+        "description": "Attempts to leave the AWS Organization (unsuccessfully - will hit an AccessDenied error). \nSecurity configurations are often defined at the organization level (GuardDuty, SecurityHub, CloudTrail...). \nLeaving the organization can disrupt or totally shut down these controls.\n\n\nWarm-up: \n\n- Create an IAM role without permissions to run organizations:LeaveOrganization\n\nDetonation: \n\n- Call organization:LeaveOrganization to simulate an attempt to leave the AWS Organization.",
+        "detonate_calls": [
+          "organizations:LeaveOrganization"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-leave-org"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1666.A002",
+            "name": "Modify Cloud Resource Hierarchy: Leave AWS Organization"
+          }
+        ]
+      },
+      "aws.defense-evasion.vpc-remove-flow-logs": {
+        "source_path": "v2/internal/attacktechniques/aws/defense-evasion/vpc-remove-flow-logs/main.go",
+        "attack_tactics": [
+          "defense-evasion"
+        ],
+        "description": "Removes a VPC Flog Logs configuration from a VPC.\n\nWarm-up: \n\n- Create a VPC with a VPC Flow Logs configuration.\n\nDetonation: \n\n- Remove the VPC Flow Logs configuration.",
+        "detonate_calls": [
+          "ec2:DeleteFlowLogs"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "/stratus-red-team/vpc-flow-logs",
+          "stratus-red-team-remove-flow-logs"
+        ],
+        "stated_techniques": []
+      },
+      "aws.discovery.ec2-download-user-data": {
+        "source_path": "v2/internal/attacktechniques/aws/discovery/ec2-get-user-data/main.go",
+        "attack_tactics": [
+          "discovery"
+        ],
+        "description": "Runs ec2:DescribeInstanceAttribute on several instances. This simulates an attacker attempting to\nretrieve Instance User Data that may include installation scripts and hard-coded secrets for deployment.\n\nSee: \n\n- https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html\n- https://hackingthe.cloud/aws/general-knowledge/introduction_user_data/\n- https://github.com/RhinoSecurityLabs/pacu/blob/master/pacu/modules/ec2__download_userdata/main.py\n\nWarm-up: \n\n- Create an IAM role without permissions to run ec2:DescribeInstanceAttribute\n\nDetonation: \n\n- Run ec2:DescribeInstanceAttribute on multiple fictitious instance IDs\n- These calls will result in access denied errors",
+        "detonate_calls": [
+          "ec2:DescribeInstanceAttribute"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-get-usr-data"
+        ],
+        "stated_techniques": []
+      },
+      "aws.discovery.ec2-enumerate-from-instance": {
+        "source_path": "v2/internal/attacktechniques/aws/discovery/ec2-enumerate-from-instance/main.go",
+        "attack_tactics": [
+          "discovery"
+        ],
+        "description": "Runs several discovery commands on an EC2 instance:\n\n- sts:GetCallerIdentity\n- s3:ListBuckets\n- iam:GetAccountSummary\n- iam:ListRoles\n- iam:ListUsers\n- iam:GetAccountAuthorizationDetails\n- ec2:DescribeSnapshots\n- cloudtrail:DescribeTrails\n- guardduty:ListDetectors\n\nThe commands will be run under the identity of the EC2 instance role, simulating an attacker having compromised an EC2 instance and running discovery commands on it.\n\nWarm-up:\n\n- Create the prerequisite EC2 instance and VPC (takes a few minutes).\n\nDetonation: \n\n- Run the discovery commands, over SSM. The commands will be run under the identity of the EC2 instance role.",
+        "detonate_calls": [
+          "ssm:GetCommandInvocation",
+          "ssm:SendCommand"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-ec2-enumerate"
+        ],
+        "stated_techniques": []
+      },
+      "aws.execution.ec2-launch-unusual-instances": {
+        "source_path": "v2/internal/attacktechniques/aws/execution/ec2-launch-unusual-instances/main.go",
+        "attack_tactics": [
+          "execution"
+        ],
+        "description": "Attempts to launch several unusual EC2 instances (",
+        "detonate_calls": [
+          "ec2:RunInstances"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-ec2lui"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1496.A008",
+            "name": "Resource Hijacking: Compute Hijacking - EC2 Use"
+          },
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1578.002",
+            "name": "Modify Cloud Compute Infrastructure: Create Cloud Instance"
+          }
+        ]
+      },
+      "aws.execution.ec2-user-data": {
+        "source_path": "v2/internal/attacktechniques/aws/execution/ec2-user-data/main.go",
+        "attack_tactics": [
+          "execution",
+          "privilege-escalation"
+        ],
+        "description": "Executes code on a Linux EC2 instance through User Data.\n\nReferences:\n\n- https://hackingthe.cloud/aws/exploitation/local-priv-esc-mod-instance-att/\n- https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html\n\nWarm-up:\n\n- Create the prerequisite EC2 instance and VPC (takes a few minutes).\n\nDetonation:\n\n- Stop the instance\n- Use ModifyInstanceAttribute to inject a malicious script in user data\n- Start the instance\n- Upon starting, the malicious script in user data is automatically executed as the root user",
+        "detonate_calls": [
+          "ec2:DescribeInstances",
+          "ec2:ModifyInstanceAttribute",
+          "ec2:StartInstances",
+          "ec2:StopInstances"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-usr-data"
+        ],
+        "stated_techniques": []
+      },
+      "aws.exfiltration.ec2-security-group-open-port-22-ingress": {
+        "source_path": "v2/internal/attacktechniques/aws/exfiltration/ec2-security-group-open-port-22-ingress/main.go",
+        "attack_tactics": [
+          "exfiltration"
+        ],
+        "description": "Opens ingress traffic on port 22 from the Internet (0.0.0.0/0).\n\nWarm-up: \n\n- Create a VPC and a security group inside it.\n\nDetonation: \n\n- Call ec2:AuthorizeSecurityGroupIngress to allow ingress traffic on port 22 from 0.0.0.0/0.",
+        "detonate_calls": [
+          "ec2:AuthorizeSecurityGroupIngress"
+        ],
+        "revert_calls": [
+          "ec2:RevokeSecurityGroupIngress"
+        ],
+        "identifiers": [
+          "StratusRedTeamVpc",
+          "stratus-red-team-open-sg"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1562.007",
+            "name": "Impair Defenses: Disable or Modify Cloud Firewall"
+          }
+        ]
+      },
+      "aws.exfiltration.ec2-share-ami": {
+        "source_path": "v2/internal/attacktechniques/aws/exfiltration/ec2-share-ami/main.go",
+        "attack_tactics": [
+          "exfiltration"
+        ],
+        "description": "Exfiltrates an AMI by sharing it with an external AWS account.\n\nWarm-up: \n\n- Create an AMI.\n\nDetonation: \n\n- Share the AMI with an external, fictitious AWS account.",
+        "detonate_calls": [
+          "ec2:ModifyImageAttribute"
+        ],
+        "revert_calls": [
+          "ec2:ModifyImageAttribute"
+        ],
+        "identifiers": [
+          "stratus-red-team-share-ami"
+        ],
+        "stated_techniques": []
+      },
+      "aws.exfiltration.ec2-share-ebs-snapshot": {
+        "source_path": "v2/internal/attacktechniques/aws/exfiltration/ec2-share-ebs-snapshot/main.go",
+        "attack_tactics": [
+          "exfiltration"
+        ],
+        "description": "Exfiltrates an EBS snapshot by sharing it with an external AWS account.\n\nWarm-up: \n\n- Create an EBS volume and a snapshot.\n\nDetonation: \n\n- Call ec2:ModifySnapshotAttribute to share the snapshot with an external, fictitious AWS account.",
+        "detonate_calls": [
+          "ec2:ModifySnapshotAttribute"
+        ],
+        "revert_calls": [
+          "ec2:ModifySnapshotAttribute"
+        ],
+        "identifiers": [
+          "StratusRedTeamVolume"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1578.001",
+            "name": "Modify Cloud Compute Infrastructure: Create Snapshot"
+          }
+        ]
+      },
+      "aws.exfiltration.rds-share-snapshot": {
+        "source_path": "v2/internal/attacktechniques/aws/exfiltration/rds-share-snapshot/main.go",
+        "attack_tactics": [
+          "exfiltration"
+        ],
+        "description": "Shares a RDS Snapshot with an external AWS account to simulate an attacker exfiltrating a database.\n\nWarm-up:\n\n- Create a RDS Instance (slow, around 10 minutes)\n- Create a RDS Snapshot\n\nDetonation:\n\n- Call rds:ModifyDBSnapshotAttribute to share the snapshot with an external AWS account",
+        "detonate_calls": [
+          "rds:ModifyDBSnapshotAttribute"
+        ],
+        "revert_calls": [
+          "rds:ModifyDBSnapshotAttribute"
+        ],
+        "identifiers": [
+          "stratus-red-team-share-snap"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1496.A007",
+            "name": "Resource Hijacking: Cloud Service Hijacking - Bedrock LLM Abuse"
+          }
+        ]
+      },
+      "aws.exfiltration.s3-backdoor-bucket-policy": {
+        "source_path": "v2/internal/attacktechniques/aws/exfiltration/s3-backdoor-bucket-policy/main.go",
+        "attack_tactics": [
+          "exfiltration"
+        ],
+        "description": "Exfiltrates data from an S3 bucket by backdooring its Bucket Policy to allow access from an external, fictitious AWS account.\n\nWarm-up: \n\n- Create an S3 bucket.\n\nDetonation: \n\n- Backdoor the S3 Bucket Policy by setting the following Bucket Policy:\n\n<pre>\n<code>",
+        "detonate_calls": [
+          "s3:PutBucketPolicy"
+        ],
+        "revert_calls": [
+          "s3:DeleteBucketPolicy"
+        ],
+        "identifiers": [
+          "stratus-red-team-bdbp"
+        ],
+        "stated_techniques": []
+      },
+      "aws.initial-access.console-login-without-mfa": {
+        "source_path": "v2/internal/attacktechniques/aws/initial-access/console-login-without-mfa/main.go",
+        "attack_tactics": [
+          "initial-access"
+        ],
+        "description": "Simulates a login to the AWS Console for an IAM user without multi-factor authentication (MFA).\n\nWarm-up:\n\n- Create an IAM user\n- Create a console profile for this user so it can log in to the AWS Console\n\nDetonation:\n\n- Log in to the AWS Console\n\nReferences:\n\n- https://expel.com/blog/incident-report-from-cli-to-console-chasing-an-attacker-in-aws/\n- https://naikordian.github.io/blog/posts/brute-force-aws-console/",
+        "detonate_calls": [
+          "signin:ConsoleLogin"
+        ],
+        "revert_calls": [],
+        "identifiers": [
+          "stratus-red-team-nmfalu"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1078.A001",
+            "name": "Valid Accounts: IAM Users"
+          }
+        ]
+      },
+      "aws.persistence.iam-backdoor-role": {
+        "source_path": "v2/internal/attacktechniques/aws/persistence/iam-backdoor-role/main.go",
+        "attack_tactics": [
+          "persistence"
+        ],
+        "description": "Establishes persistence by backdooring an existing IAM role, allowing it to be assumed from an external AWS account.\n\nWarm-up: \n\n- Create an IAM role.\n\nDetonation: \n\n- Update the assume role policy of the IAM role to backdoor it, making it accessible from an external, fictitious AWS account:\n\n<pre>\n<code>",
+        "detonate_calls": [
+          "iam:UpdateAssumeRolePolicy"
+        ],
+        "revert_calls": [
+          "iam:UpdateAssumeRolePolicy"
+        ],
+        "identifiers": [
+          "stratus-red-team-backdoor-r"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1098.003",
+            "name": "Account Manipulation: Additional Cloud Roles"
+          }
+        ]
+      },
+      "aws.persistence.iam-backdoor-user": {
+        "source_path": "v2/internal/attacktechniques/aws/persistence/iam-backdoor-user/main.go",
+        "attack_tactics": [
+          "persistence",
+          "privilege-escalation"
+        ],
+        "description": "Establishes persistence by creating an access key on an existing IAM user.\n\nWarm-up: \n\n- Create an IAM user.\n\nDetonation: \n\n- Create an IAM access key on the user.",
+        "detonate_calls": [
+          "iam:CreateAccessKey"
+        ],
+        "revert_calls": [
+          "iam:DeleteAccessKey",
+          "iam:ListAccessKeys"
+        ],
+        "identifiers": [
+          "stratus-red-team-backdoor-u"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1098.001",
+            "name": "Account Manipulation: Additional Cloud Credentials"
+          }
+        ]
+      },
+      "aws.persistence.iam-create-admin-user": {
+        "source_path": "v2/internal/attacktechniques/aws/persistence/iam-create-admin-user/main.go",
+        "attack_tactics": [
+          "persistence",
+          "privilege-escalation"
+        ],
+        "description": "Establishes persistence by creating a new IAM user with administrative permissions.\n\nWarm-up: None.\n\nDetonation: \n\n- Create the IAM user and attach the 'AdministratorAccess' managed IAM policy to it.\n\nReferences:\n\n- https://permiso.io/blog/s/approach-to-detection-androxgh0st-greenbot-persistence/\n- https://blog.darklab.hk/2021/07/06/trouble-in-paradise/\n- https://expel.com/blog/incident-report-from-cli-to-console-chasing-an-attacker-in-aws/",
+        "detonate_calls": [
+          "iam:AttachUserPolicy",
+          "iam:CreateAccessKey",
+          "iam:CreateUser"
+        ],
+        "revert_calls": [
+          "iam:DeleteAccessKey",
+          "iam:DeleteUser",
+          "iam:DetachUserPolicy",
+          "iam:ListAccessKeys"
+        ],
+        "identifiers": [
+          "malicious-iam-user"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1136.003",
+            "name": "Create Account: Create Cloud Account"
+          }
+        ]
+      },
+      "aws.persistence.iam-create-user-login-profile": {
+        "source_path": "v2/internal/attacktechniques/aws/persistence/iam-create-user-login-profile/main.go",
+        "attack_tactics": [
+          "persistence",
+          "privilege-escalation"
+        ],
+        "description": "Establishes persistence by creating a Login Profile on an existing IAM user. This allows an attacker to access an IAM\nuser intended to be used programmatically through the AWS console usual login process. \n\nWarm-up:\n\n- Create an IAM user\n\nDetonation: \n\n- Create an IAM Login Profile on the user\n\nReferences:\n- https://permiso.io/blog/s/approach-to-detection-androxgh0st-greenbot-persistence/\n- https://blog.darklab.hk/2021/07/06/trouble-in-paradise/\n- https://expel.com/blog/incident-report-from-cli-to-console-chasing-an-attacker-in-aws/",
+        "detonate_calls": [
+          "iam:CreateLoginProfile"
+        ],
+        "revert_calls": [
+          "iam:DeleteLoginProfile"
+        ],
+        "identifiers": [
+          "stratus-red-team-login-profile"
+        ],
+        "stated_techniques": [
+          {
+            "framework": "AWS Threat Technique Catalog",
+            "id": "T1098.001",
+            "name": "Account Manipulation: Additional Cloud Credentials"
+          }
+        ]
+      },
+      "aws.persistence.lambda-backdoor-function": {
+        "source_path": "v2/internal/attacktechniques/aws/persistence/lambda-backdoor-function/main.go",
+        "attack_tactics": [
+          "persistence"
+        ],
+        "description": "Establishes persistence by backdooring a lambda function to allow its invocation from an external AWS account.\n\nWarm-up: \n\n- Create a Lambda function.\n\nDetonation: \n\n- Modify the Lambda function resource-base policy to allow lambda:InvokeFunction from an external, fictitious AWS account.",
+        "detonate_calls": [
+          "lambda:AddPermission"
+        ],
+        "revert_calls": [
+          "lambda:RemovePermission"
+        ],
+        "identifiers": [
+          "stratus-red-team-backdoor-f"
+        ],
+        "stated_techniques": []
+      },
+      "aws.persistence.lambda-overwrite-code": {
+        "source_path": "v2/internal/attacktechniques/aws/persistence/lambda-overwrite-code/main.go",
+        "attack_tactics": [
+          "persistence"
+        ],
+        "description": "Establishes persistence by overwriting a Lambda function's code. \nA further, more advanced, use-case could be updating the code to exfiltrate the data processed by the Lambda function at runtime.\n\nWarm-up: \n\n- Create a Lambda function.\n\nDetonation: \n\n- Update the Lambda function code.\n\nReferences:\n- https://research.splunk.com/cloud/aws_lambda_updatefunctioncode/\n- Expel's AWS security mindmap",
+        "detonate_calls": [
+          "lambda:UpdateFunctionCode"
+        ],
+        "revert_calls": [
+          "lambda:UpdateFunctionCode"
+        ],
+        "identifiers": [
+          "stratus-red-team-olc"
+        ],
+        "stated_techniques": []
+      },
+      "aws.persistence.rolesanywhere-create-trust-anchor": {
+        "source_path": "v2/internal/attacktechniques/aws/persistence/rolesanywhere-create-trust-anchor/main.go",
+        "attack_tactics": [
+          "persistence",
+          "privilege-escalation"
+        ],
+        "description": "Establishes persistence by creating an IAM Roles Anywhere trust anchor. \nThe IAM Roles Anywhere service allows workloads that do not run in AWS to assume roles by presenting a client-side \nX.509 certificate signed by a trusted certificate authority, called a \"trust anchor\".\n\nAssuming IAM Roles Anywhere is in use (i.e., that some of the IAM roles in the account have a \n[trust policy](https://docs.aws.amazon.com/rolesanywhere/latest/userguide/trust-model.html#trust-policy) trusting \nthe IAM Roles Anywhere service), an attacker creating a trust anchor can subsequently assume these roles.\n\nWarm-up:\n\n- Create an IAM role that can be used by IAM Roles Anywhere (see [docs](https://docs.aws.amazon.com/rolesanywhere/latest/userguide/getting-started.html#getting-started-step2))\n\nDetonation: \n\n- Create an IAM Roles Anywhere trust anchor\n- Create an IAM Roles Anywhere profile\n\nReferences:\n\n- https://docs.aws.amazon.com/rolesanywhere/latest/userguide/trust-model.html\n- https://docs.aws.amazon.com/rolesanywhere/latest/userguide/getting-started.html",
+        "detonate_calls": [
+          "rolesanywhere:CreateProfile",
+          "rolesanywhere:CreateTrustAnchor"
+        ],
+        "revert_calls": [
+          "rolesanywhere:DeleteProfile",
+          "rolesanywhere:DeleteTrustAnchor",
+          "rolesanywhere:ListProfiles",
+          "rolesanywhere:ListTrustAnchors"
+        ],
+        "identifiers": [
+          "stratus-red-team-trust-anchor"
+        ],
+        "stated_techniques": []
+      }
+    }
+  },
+  "attack": {
+    "name": "MITRE ATT&CK Enterprise",
+    "version": "20.0",
+    "repository": "https://github.com/mitre-attack/attack-stix-data",
+    "commit": "c2494b29dd268c46a5d0ea0990553e4327cd2253",
+    "path": "enterprise-attack/enterprise-attack-20.0.json",
+    "sha256": "81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352",
+    "techniques": {
+      "T1021.004": {
+        "status": "active",
+        "name": "SSH",
+        "tactics": [
+          "lateral-movement"
+        ]
+      },
+      "T1021.008": {
+        "status": "active",
+        "name": "Direct Cloud VM Connections",
+        "tactics": [
+          "lateral-movement"
+        ]
+      },
+      "T1078": {
+        "status": "active",
+        "name": "Valid Accounts",
+        "tactics": [
+          "initial-access",
+          "persistence",
+          "privilege-escalation",
+          "stealth"
+        ]
+      },
+      "T1078.004": {
+        "status": "active",
+        "name": "Cloud Accounts",
+        "tactics": [
+          "initial-access",
+          "persistence",
+          "privilege-escalation",
+          "stealth"
+        ]
+      },
+      "T1078.A001": {
+        "status": "not in ATT&CK"
+      },
+      "T1087.004": {
+        "status": "active",
+        "name": "Cloud Account",
+        "tactics": [
+          "discovery"
+        ]
+      },
+      "T1098": {
+        "status": "active",
+        "name": "Account Manipulation",
+        "tactics": [
+          "persistence",
+          "privilege-escalation"
+        ]
+      },
+      "T1098.001": {
+        "status": "active",
+        "name": "Additional Cloud Credentials",
+        "tactics": [
+          "persistence",
+          "privilege-escalation"
+        ]
+      },
+      "T1098.003": {
+        "status": "active",
+        "name": "Additional Cloud Roles",
+        "tactics": [
+          "persistence",
+          "privilege-escalation"
+        ]
+      },
+      "T1110.001": {
+        "status": "active",
+        "name": "Password Guessing",
+        "tactics": [
+          "credential-access"
+        ]
+      },
+      "T1110.002": {
+        "status": "active",
+        "name": "Password Cracking",
+        "tactics": [
+          "credential-access"
+        ]
+      },
+      "T1110.003": {
+        "status": "active",
+        "name": "Password Spraying",
+        "tactics": [
+          "credential-access"
+        ]
+      },
+      "T1119": {
+        "status": "active",
+        "name": "Automated Collection",
+        "tactics": [
+          "collection"
+        ]
+      },
+      "T1136.003": {
+        "status": "active",
+        "name": "Cloud Account",
+        "tactics": [
+          "persistence"
+        ]
+      },
+      "T1201": {
+        "status": "active",
+        "name": "Password Policy Discovery",
+        "tactics": [
+          "discovery"
+        ]
+      },
+      "T1204": {
+        "status": "active",
+        "name": "User Execution",
+        "tactics": [
+          "execution"
+        ]
+      },
+      "T1204.003": {
+        "status": "active",
+        "name": "Malicious Image",
+        "tactics": [
+          "execution"
+        ]
+      },
+      "T1485": {
+        "status": "active",
+        "name": "Data Destruction",
+        "tactics": [
+          "impact"
+        ]
+      },
+      "T1486": {
+        "status": "active",
+        "name": "Data Encrypted for Impact",
+        "tactics": [
+          "impact"
+        ]
+      },
+      "T1496.A007": {
+        "status": "not in ATT&CK"
+      },
+      "T1496.A008": {
+        "status": "not in ATT&CK"
+      },
+      "T1526": {
+        "status": "active",
+        "name": "Cloud Service Discovery",
+        "tactics": [
+          "discovery"
+        ]
+      },
+      "T1530": {
+        "status": "active",
+        "name": "Data from Cloud Storage",
+        "tactics": [
+          "collection"
+        ]
+      },
+      "T1537": {
+        "status": "active",
+        "name": "Transfer Data to Cloud Account",
+        "tactics": [
+          "exfiltration"
+        ]
+      },
+      "T1552": {
+        "status": "active",
+        "name": "Unsecured Credentials",
+        "tactics": [
+          "credential-access"
+        ]
+      },
+      "T1552.005": {
+        "status": "active",
+        "name": "Cloud Instance Metadata API",
+        "tactics": [
+          "credential-access"
+        ]
+      },
+      "T1555.006": {
+        "status": "active",
+        "name": "Cloud Secrets Management Stores",
+        "tactics": [
+          "credential-access"
+        ]
+      },
+      "T1562.007": {
+        "status": "revoked",
+        "name": "Disable or Modify Cloud Firewall",
+        "revoked_by": [
+          "T1686.001"
+        ]
+      },
+      "T1562.008": {
+        "status": "revoked",
+        "name": "Disable or Modify Cloud Logs",
+        "revoked_by": [
+          "T1685.002"
+        ]
+      },
+      "T1578.001": {
+        "status": "active",
+        "name": "Create Snapshot",
+        "tactics": [
+          "defense-impairment"
+        ]
+      },
+      "T1578.002": {
+        "status": "active",
+        "name": "Create Cloud Instance",
+        "tactics": [
+          "defense-impairment"
+        ]
+      },
+      "T1578.005": {
+        "status": "active",
+        "name": "Modify Cloud Compute Configurations",
+        "tactics": [
+          "defense-impairment"
+        ]
+      },
+      "T1580": {
+        "status": "active",
+        "name": "Cloud Infrastructure Discovery",
+        "tactics": [
+          "discovery"
+        ]
+      },
+      "T1586.003": {
+        "status": "active",
+        "name": "Cloud Accounts",
+        "tactics": [
+          "resource-development"
+        ]
+      },
+      "T1621": {
+        "status": "active",
+        "name": "Multi-Factor Authentication Request Generation",
+        "tactics": [
+          "credential-access"
+        ]
+      },
+      "T1666.A002": {
+        "status": "not in ATT&CK"
+      },
+      "T1685.002": {
+        "status": "active",
+        "name": "Disable or Modify Cloud Log",
+        "tactics": [
+          "defense-impairment"
+        ]
+      },
+      "T1686.001": {
+        "status": "active",
+        "name": "Cloud Firewall",
+        "tactics": [
+          "defense-impairment"
+        ]
+      }
+    }
+  },
+  "splunk_label_sources": {
+    "repository": "https://github.com/splunk/attack_data",
+    "commit": "eac2f8f675ec31a6618003399dcc53641524e673",
+    "files": {
+      "attack_techniques/T1021.008/aws_ec2_multiple_ssh_public_keys_uploaded/aws_ec2_multiple_ssh_public_keys_uploaded.json": "descriptor field mitre_technique",
+      "attack_techniques/T1078.004/aws_login_sfa/cloudtrail.json": "directory name",
+      "attack_techniques/T1078/assume_role_with_saml/assume_role_with_saml.json": "directory name",
+      "attack_techniques/T1078/aws_create_policy_version/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1078/aws_createaccesskey/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1078/aws_createloginprofile/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1078/aws_setdefaultpolicyversion/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1078/aws_updateloginprofile/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1087.004/aws_invoke_model_access_denied/cloudtrail.json": "directory name",
+      "attack_techniques/T1098.003/aws_iam_role_created_with_external_trust/aws_iam_role_created_with_external_trust.json": "descriptor field mitre_technique",
+      "attack_techniques/T1098/aws_iam_delete_policy/aws_iam_delete_policy.json": "descriptor field mitre_technique",
+      "attack_techniques/T1098/aws_iam_failure_group_deletion/aws_iam_failure_group_deletion.json": "descriptor field mitre_technique",
+      "attack_techniques/T1098/aws_iam_successful_group_deletion/aws_iam_successful_group_deletion.json": "descriptor field mitre_technique",
+      "attack_techniques/T1110.001/aws_login_failure/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1110.002/aws_rds_password_reset/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1110.003/aws_mulitple_failed_console_login/aws_cloudtrail.json": "descriptor field mitre_technique",
+      "attack_techniques/T1110.003/aws_multiple_login_fail_per_user/cloudtrail.json": "directory name",
+      "attack_techniques/T1119/aws_exfil_datasync/cloudtrail.json": "directory name",
+      "attack_techniques/T1201/aws_password_policy/cloudtrail.json": "directory name",
+      "attack_techniques/T1204.003/aws_ecr_container_upload/aws_ecr_container_upload.json": "descriptor field mitre_technique",
+      "attack_techniques/T1204.003/aws_ecr_image_scanning/aws_ecr_scanning_findings_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1204/aws_updatelambdafunctioncode/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1485/aws_delete_knowledge_base/cloudtrail.json": "directory name",
+      "attack_techniques/T1486/aws_kms_key/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1486/s3_file_encryption/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1526/aws_security_scanner/aws_security_scanner.json": "descriptor field mitre_technique",
+      "attack_techniques/T1530/aws_cloudwatch_logs_high_volume_retrieval/aws_cloudwatch_logs_high_volume_retrieval.json": "descriptor field mitre_technique",
+      "attack_techniques/T1530/aws_exfil_high_no_getobject/cloudtrail.json": "directory name",
+      "attack_techniques/T1530/aws_s3_public_bucket/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1537/aws_ami_shared_public/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1537/aws_snapshot_exfil/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1552/aws_getpassworddata/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1555.006/aws_anomalous_secrets_manager_batch_retrieval/aws_anomalous_secrets_manager_batch_retrieval.json": "descriptor field mitre_technique",
+      "attack_techniques/T1562.007/aws_create_acl/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1562.008/aws_bedrock_delete_guardrails/cloudtrail.json": "directory name",
+      "attack_techniques/T1562.008/aws_bedrock_delete_model_invocation_logging/cloudtrail.json": "directory name",
+      "attack_techniques/T1562.008/aws_delete_security_services/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1562.008/delete_cloudwatch_log_group/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1562.008/put_bucketlifecycle/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1562.008/stop_delete_cloudtrail/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1562.008/update_cloudtrail/aws_cloudtrail_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1578.005/aws_ec2_startup_script_modification/aws_ec2_startup_script_modification.json": "descriptor field mitre_technique",
+      "attack_techniques/T1580/aws_bedrock_list_foundation_model_failures/cloudtrail.json": "directory name",
+      "attack_techniques/T1580/aws_iam_accessdenied_discovery_events/aws_iam_accessdenied_discovery_events.json": "descriptor field mitre_technique",
+      "attack_techniques/T1580/aws_iam_assume_role_policy_brute_force/aws_iam_assume_role_policy_brute_force.json": "descriptor field mitre_technique",
+      "attack_techniques/T1580/aws_iam_excessive_list_command_usage/aws_iam_excessive_list_command_usage.json": "descriptor field mitre_technique",
+      "attack_techniques/T1586.003/aws_console_login_multiple_ips/cloudtrail.json": "directory name",
+      "attack_techniques/T1621/aws_failed_mfa/cloudtrail.json": "directory name",
+      "suspicious_behaviour/abnormally_high_cloud_instances_launched/cloudtrail_behavioural_detections.json": "directory name"
+    }
+  }
+}
