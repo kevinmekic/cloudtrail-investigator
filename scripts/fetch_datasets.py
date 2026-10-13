@@ -265,11 +265,8 @@ def manifest_entry(
                     entry[key] = pin[key]
             files.append(entry)
 
-    entry = {
-        key: spec[key]
-        for key in ("title", "source_page", "license", "integrity", "upstream", "archive")
-        if key in spec
-    }
+    provenance_keys = ("title", "source_page", "license", "integrity", "selection", "upstream")
+    entry = {key: spec[key] for key in (*provenance_keys, "archive") if key in spec}
     counts = [f["records"] for f in files]
     entry.update(
         directory=dataset_dir.relative_to(data_dir).as_posix(),

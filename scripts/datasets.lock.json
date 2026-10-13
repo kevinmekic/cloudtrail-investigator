@@ -1,6 +1,140 @@
 {
   "schema_version": 1,
   "datasets": {
+    "flaws_cloud": {
+      "title": "flaws.cloud CloudTrail logs (Summit Route, 2020)",
+      "optional": false,
+      "source_page": "https://summitroute.com/blog/2020/10/09/public_dataset_of_cloudtrail_logs_from_flaws_cloud/",
+      "license": "No license stated by the source. Published by Summit Route (Scott Piper) as a public research dataset; the site footer reads 'All Rights Reserved'. Fetch from the source, do not redistribute.",
+      "integrity": "The source publishes no checksum. The archive SHA-256 was pinned on first download (trust on first use); members are hashed from that verified archive.",
+      "archive": {
+        "url": "https://summitroute.com/downloads/flaws_cloudtrail_logs.tar",
+        "size": 251688960,
+        "sha256": "f26c2b8da56bb00d695a57f00f86208117582b9216bb52424d68e718ca2a96aa"
+      },
+      "files": [
+        {
+          "path": "flaws_cloudtrail00.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail00.json.gz",
+          "size": 19210773,
+          "sha256": "62dadeb453cefd0ac3a863003fa340b09375380daac3009855907234fa42845e"
+        },
+        {
+          "path": "flaws_cloudtrail01.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail01.json.gz",
+          "size": 14465810,
+          "sha256": "0a41ae88793e75d027031ce5e9a2f613a458cdeb984a2e5ec95c4f08b7b661a4"
+        },
+        {
+          "path": "flaws_cloudtrail02.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail02.json.gz",
+          "size": 10039965,
+          "sha256": "9276398fe6a7434b5505b0ce50be1e1d16b066fa304659f1b234af0c315e6ad5"
+        },
+        {
+          "path": "flaws_cloudtrail03.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail03.json.gz",
+          "size": 7804367,
+          "sha256": "b3f11ca8a062f23048879f07717e4c35f225562dab051f20483cfe1100ae5c62"
+        },
+        {
+          "path": "flaws_cloudtrail04.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail04.json.gz",
+          "size": 11179161,
+          "sha256": "bab0f15bfe4a77c8557377704e745a5e4f00530c96afc5e20963c8dbf3055df4"
+        },
+        {
+          "path": "flaws_cloudtrail05.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail05.json.gz",
+          "size": 11621865,
+          "sha256": "832b45f26ddcef4e1490452152b067f653016c91020945bedbe13172f1626094"
+        },
+        {
+          "path": "flaws_cloudtrail06.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail06.json.gz",
+          "size": 10294576,
+          "sha256": "b6515ac7c49bf5f91d312d9fecb2727196b32c3617a2ef3a9c545143341ab1ae"
+        },
+        {
+          "path": "flaws_cloudtrail07.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail07.json.gz",
+          "size": 10364850,
+          "sha256": "5e360b277e6b0ddbcabb378b49b2c34d88f8c26ab9f029774d479078f3d8232b"
+        },
+        {
+          "path": "flaws_cloudtrail08.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail08.json.gz",
+          "size": 12546557,
+          "sha256": "440dd073958db7df96525f00d0e74c7156b770e0c743c659d792c069937b9331"
+        },
+        {
+          "path": "flaws_cloudtrail09.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail09.json.gz",
+          "size": 10977945,
+          "sha256": "eb33a66b5c6bc4da3cb381f50dfc75f300cea84c54388872818b5d768f759570"
+        },
+        {
+          "path": "flaws_cloudtrail10.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail10.json.gz",
+          "size": 9476616,
+          "sha256": "c424667317bb38899fb6099822519ff3f8c7170ce04c22318ceee45067572222"
+        },
+        {
+          "path": "flaws_cloudtrail11.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail11.json.gz",
+          "size": 9602951,
+          "sha256": "2302322e6fb4e8a811aaa6d22ecbe7f66866514f01f81fbfd8498aba9ea63266"
+        },
+        {
+          "path": "flaws_cloudtrail12.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail12.json.gz",
+          "size": 10968399,
+          "sha256": "2beb7dd3065885d466287b560016d53242bab999881d49e26fe402e63e734465"
+        },
+        {
+          "path": "flaws_cloudtrail13.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail13.json.gz",
+          "size": 11782289,
+          "sha256": "bea798bc93993fd0eb284445488dadd97b93ba5885817087ce711eecfb8a99f6"
+        },
+        {
+          "path": "flaws_cloudtrail14.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail14.json.gz",
+          "size": 12871431,
+          "sha256": "6cfd9f02bc50120ae0cd9d685a80088e0343e4ac643724604f7161989d2750cd"
+        },
+        {
+          "path": "flaws_cloudtrail15.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail15.json.gz",
+          "size": 12155113,
+          "sha256": "54b1bb0c990c46d445b7674e1e5343ef730f0848d5012a6c3894e58311daab87"
+        },
+        {
+          "path": "flaws_cloudtrail16.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail16.json.gz",
+          "size": 18751542,
+          "sha256": "0b575d07597988c39da91e5c55ec4b5493746012bc64e562320cf3748e363d35"
+        },
+        {
+          "path": "flaws_cloudtrail17.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail17.json.gz",
+          "size": 22812003,
+          "sha256": "7530a1865425c8476e124dbeb04fd86172165362c931d835d9323c6c173af464"
+        },
+        {
+          "path": "flaws_cloudtrail18.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail18.json.gz",
+          "size": 19755759,
+          "sha256": "2cb4d779ecd05c6c24b595103dcd184b915162bc00f6662269b163d66978500a"
+        },
+        {
+          "path": "flaws_cloudtrail19.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail19.json.gz",
+          "size": 4988214,
+          "sha256": "1bcf77a96388ba206ae0e960403b87e8e0000299dfcfc5e0e2d35906a06f24b2"
+        }
+      ]
+    },
     "invictus_sigma_aws": {
       "title": "Invictus IR Sigma-AWS: CloudTrail from Stratus Red Team simulations (2023)",
       "optional": false,
@@ -400,137 +534,560 @@
         }
       ]
     },
-    "flaws_cloud": {
-      "title": "flaws.cloud CloudTrail logs (Summit Route, 2020)",
-      "optional": false,
-      "source_page": "https://summitroute.com/blog/2020/10/09/public_dataset_of_cloudtrail_logs_from_flaws_cloud/",
-      "license": "No license stated by the source. Published by Summit Route (Scott Piper) as a public research dataset; the site footer reads 'All Rights Reserved'. Fetch from the source, do not redistribute.",
-      "integrity": "The source publishes no checksum. The archive SHA-256 was pinned on first download (trust on first use); members are hashed from that verified archive.",
-      "archive": {
-        "url": "https://summitroute.com/downloads/flaws_cloudtrail_logs.tar",
-        "size": 251688960,
-        "sha256": "f26c2b8da56bb00d695a57f00f86208117582b9216bb52424d68e718ca2a96aa"
+    "splunk_attack_data": {
+      "title": "Splunk attack_data: CloudTrail samples per ATT&CK technique",
+      "optional": true,
+      "source_page": "https://github.com/splunk/attack_data",
+      "license": "Apache-2.0 (repository LICENSE file)",
+      "integrity": "Pinned to a git commit. The files are Git LFS objects; every download was verified against the SHA-256 and size in its LFS pointer at that commit.",
+      "selection": "Files whose dataset descriptor (YAML) declares sourcetype 'aws:cloudtrail' and whose every record has eventID, eventName, eventSource and eventTime. Byte-identical duplicates are kept once. Everything else is listed under 'excluded' with the reason.",
+      "upstream": {
+        "repository": "https://github.com/splunk/attack_data",
+        "commit": "eac2f8f675ec31a6618003399dcc53641524e673"
       },
       "files": [
         {
-          "path": "flaws_cloudtrail00.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail00.json.gz",
-          "size": 19210773,
-          "sha256": "62dadeb453cefd0ac3a863003fa340b09375380daac3009855907234fa42845e"
+          "path": "attack_techniques/T1021.008/aws_ec2_multiple_ssh_public_keys_uploaded/aws_ec2_multiple_ssh_public_keys_uploaded.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1021.008/aws_ec2_multiple_ssh_public_keys_uploaded/aws_ec2_multiple_ssh_public_keys_uploaded.json",
+          "size": 19944,
+          "sha256": "0d20787d8db59111b0e07ecbf35092c18e68a0909f531e3d8474ccf573092052",
+          "mitre_technique": [
+            "T1021.004",
+            "T1021.008"
+          ],
+          "descriptor": "datasets/attack_techniques/T1021.008/aws_ec2_multiple_ssh_public_keys_uploaded/aws_ec2_multiple_ssh_public_keys_uploaded.yml"
         },
         {
-          "path": "flaws_cloudtrail01.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail01.json.gz",
-          "size": 14465810,
-          "sha256": "0a41ae88793e75d027031ce5e9a2f613a458cdeb984a2e5ec95c4f08b7b661a4"
+          "path": "attack_techniques/T1078.004/aws_login_sfa/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1078.004/aws_login_sfa/cloudtrail.json",
+          "size": 2272,
+          "sha256": "395d8a667d12577fe83116c5fd0d850ea1b27dd21b1e303d08529869a5872b9a",
+          "mitre_technique": [
+            "T1078.004"
+          ],
+          "descriptor": "datasets/attack_techniques/T1078.004/aws_login_sfa/aws_login_sfa_old.yml"
         },
         {
-          "path": "flaws_cloudtrail02.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail02.json.gz",
-          "size": 10039965,
-          "sha256": "9276398fe6a7434b5505b0ce50be1e1d16b066fa304659f1b234af0c315e6ad5"
+          "path": "attack_techniques/T1078/assume_role_with_saml/assume_role_with_saml.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1078/assume_role_with_saml/assume_role_with_saml.json",
+          "size": 83209,
+          "sha256": "ca9dbc11aeb6b7bbde8eb3ebe92b8773ed3f6f1b5e6b3c88d9cd046785ac2209",
+          "mitre_technique": [
+            "T1078"
+          ],
+          "descriptor": "datasets/attack_techniques/T1078/assume_role_with_saml/assume_role_with_saml_old.yml"
         },
         {
-          "path": "flaws_cloudtrail03.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail03.json.gz",
-          "size": 7804367,
-          "sha256": "b3f11ca8a062f23048879f07717e4c35f225562dab051f20483cfe1100ae5c62"
+          "path": "attack_techniques/T1078/aws_create_policy_version/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1078/aws_create_policy_version/aws_cloudtrail_events.json",
+          "size": 3817,
+          "sha256": "66170b51f3819ac9db6fbd2864557bccb351ae31b948329b10c5ba2efb278110",
+          "mitre_technique": [
+            "T1078"
+          ],
+          "descriptor": "datasets/attack_techniques/T1078/aws_create_policy_version/aws_create_policy_version.yml"
         },
         {
-          "path": "flaws_cloudtrail04.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail04.json.gz",
-          "size": 11179161,
-          "sha256": "bab0f15bfe4a77c8557377704e745a5e4f00530c96afc5e20963c8dbf3055df4"
+          "path": "attack_techniques/T1078/aws_createaccesskey/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1078/aws_createaccesskey/aws_cloudtrail_events.json",
+          "size": 89943,
+          "sha256": "88c3aadd3cd9afc4db25fecd488b7eced3b1e0160f1f20592c043b327e853a8e",
+          "mitre_technique": [
+            "T1078"
+          ],
+          "descriptor": "datasets/attack_techniques/T1078/aws_createaccesskey/aws_createaccesskey.yml"
         },
         {
-          "path": "flaws_cloudtrail05.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail05.json.gz",
-          "size": 11621865,
-          "sha256": "832b45f26ddcef4e1490452152b067f653016c91020945bedbe13172f1626094"
+          "path": "attack_techniques/T1078/aws_createloginprofile/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1078/aws_createloginprofile/aws_cloudtrail_events.json",
+          "size": 42875,
+          "sha256": "6825bd4e351d0bec876dd146dd0731c27b99b571c88cb6fea91dd0d447810d52",
+          "mitre_technique": [
+            "T1078"
+          ],
+          "descriptor": "datasets/attack_techniques/T1078/aws_createloginprofile/aws_createloginprofile.yml"
         },
         {
-          "path": "flaws_cloudtrail06.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail06.json.gz",
-          "size": 10294576,
-          "sha256": "b6515ac7c49bf5f91d312d9fecb2727196b32c3617a2ef3a9c545143341ab1ae"
+          "path": "attack_techniques/T1078/aws_setdefaultpolicyversion/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1078/aws_setdefaultpolicyversion/aws_cloudtrail_events.json",
+          "size": 3824,
+          "sha256": "2efef04769c68629d65daedfb44d3776c76f5ef5007ad8ddced9ca89ca15672d",
+          "mitre_technique": [
+            "T1078"
+          ],
+          "descriptor": "datasets/attack_techniques/T1078/aws_setdefaultpolicyversion/aws_setdefaultpolicyversion.yml"
         },
         {
-          "path": "flaws_cloudtrail07.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail07.json.gz",
-          "size": 10364850,
-          "sha256": "5e360b277e6b0ddbcabb378b49b2c34d88f8c26ab9f029774d479078f3d8232b"
+          "path": "attack_techniques/T1078/aws_updateloginprofile/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1078/aws_updateloginprofile/aws_cloudtrail_events.json",
+          "size": 1687,
+          "sha256": "8103aa638715ea463e633dc616076d7c6ff1838d796d712647cbd9a7f630278b",
+          "mitre_technique": [
+            "T1078"
+          ],
+          "descriptor": "datasets/attack_techniques/T1078/aws_updateloginprofile/aws_updateloginprofile.yml"
         },
         {
-          "path": "flaws_cloudtrail08.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail08.json.gz",
-          "size": 12546557,
-          "sha256": "440dd073958db7df96525f00d0e74c7156b770e0c743c659d792c069937b9331"
+          "path": "attack_techniques/T1087.004/aws_invoke_model_access_denied/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1087.004/aws_invoke_model_access_denied/cloudtrail.json",
+          "size": 1509,
+          "sha256": "8da5f22e842c0c8cad3213028beffb8893e1de186ae07012c5b262390b98c112",
+          "mitre_technique": [
+            "T1087.004"
+          ],
+          "descriptor": "datasets/attack_techniques/T1087.004/aws_invoke_model_access_denied/aws_invoke_model_access_denied_old.yml"
         },
         {
-          "path": "flaws_cloudtrail09.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail09.json.gz",
-          "size": 10977945,
-          "sha256": "eb33a66b5c6bc4da3cb381f50dfc75f300cea84c54388872818b5d768f759570"
+          "path": "attack_techniques/T1098.003/aws_iam_role_created_with_external_trust/aws_iam_role_created_with_external_trust.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1098.003/aws_iam_role_created_with_external_trust/aws_iam_role_created_with_external_trust.json",
+          "size": 1325,
+          "sha256": "78afdd5eac72d57e581137283274310161281ecc9a1c0c8c94adfcad3d30cb23",
+          "mitre_technique": [
+            "T1098.003"
+          ],
+          "descriptor": "datasets/attack_techniques/T1098.003/aws_iam_role_created_with_external_trust/aws_iam_role_created_with_external_trust.yml"
         },
         {
-          "path": "flaws_cloudtrail10.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail10.json.gz",
-          "size": 9476616,
-          "sha256": "c424667317bb38899fb6099822519ff3f8c7170ce04c22318ceee45067572222"
+          "path": "attack_techniques/T1098/aws_iam_delete_policy/aws_iam_delete_policy.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1098/aws_iam_delete_policy/aws_iam_delete_policy.json",
+          "size": 107317,
+          "sha256": "862f9c73569bcdd38006b242bcdcd82b1424cabaaee01c4f931732e5f4c04b33",
+          "mitre_technique": [
+            "T1098"
+          ],
+          "descriptor": "datasets/attack_techniques/T1098/aws_iam_delete_policy/data.yml"
         },
         {
-          "path": "flaws_cloudtrail11.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail11.json.gz",
-          "size": 9602951,
-          "sha256": "2302322e6fb4e8a811aaa6d22ecbe7f66866514f01f81fbfd8498aba9ea63266"
+          "path": "attack_techniques/T1098/aws_iam_failure_group_deletion/aws_iam_failure_group_deletion.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1098/aws_iam_failure_group_deletion/aws_iam_failure_group_deletion.json",
+          "size": 47083,
+          "sha256": "3dae36751402bc19f86cecfac3f622ac41ef6d4c4ede6f334e3b7fbcde35a991",
+          "mitre_technique": [
+            "T1098"
+          ],
+          "descriptor": "datasets/attack_techniques/T1098/aws_iam_failure_group_deletion/data.yml"
         },
         {
-          "path": "flaws_cloudtrail12.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail12.json.gz",
-          "size": 10968399,
-          "sha256": "2beb7dd3065885d466287b560016d53242bab999881d49e26fe402e63e734465"
+          "path": "attack_techniques/T1098/aws_iam_successful_group_deletion/aws_iam_successful_group_deletion.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1098/aws_iam_successful_group_deletion/aws_iam_successful_group_deletion.json",
+          "size": 77518,
+          "sha256": "6f526a69b82e0d53ef733e79f44e6422bd599af51d2f31896b853ded069c3396",
+          "mitre_technique": [
+            "T1098"
+          ],
+          "descriptor": "datasets/attack_techniques/T1098/aws_iam_successful_group_deletion/data.yml"
         },
         {
-          "path": "flaws_cloudtrail13.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail13.json.gz",
-          "size": 11782289,
-          "sha256": "bea798bc93993fd0eb284445488dadd97b93ba5885817087ce711eecfb8a99f6"
+          "path": "attack_techniques/T1110.001/aws_login_failure/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1110.001/aws_login_failure/aws_cloudtrail_events.json",
+          "size": 8107,
+          "sha256": "d9d0ebbaf9a6aebd504b03f665eb1f35dfee4e34c0c6a5cf1c5318b7a12c1e9b",
+          "mitre_technique": [
+            "T1110.001"
+          ],
+          "descriptor": "datasets/attack_techniques/T1110.001/aws_login_failure/aws_login_failure.yml"
         },
         {
-          "path": "flaws_cloudtrail14.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail14.json.gz",
-          "size": 12871431,
-          "sha256": "6cfd9f02bc50120ae0cd9d685a80088e0343e4ac643724604f7161989d2750cd"
+          "path": "attack_techniques/T1110.002/aws_rds_password_reset/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1110.002/aws_rds_password_reset/aws_cloudtrail_events.json",
+          "size": 8635,
+          "sha256": "7015688e41e2afca485d25fcf1fc2e655402fc036e372ca0ad6d2fefc9430c1f",
+          "mitre_technique": [
+            "T1110.002"
+          ],
+          "descriptor": "datasets/attack_techniques/T1110.002/aws_rds_password_reset/aws_rds_password_reset.yml"
         },
         {
-          "path": "flaws_cloudtrail15.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail15.json.gz",
-          "size": 12155113,
-          "sha256": "54b1bb0c990c46d445b7674e1e5343ef730f0848d5012a6c3894e58311daab87"
+          "path": "attack_techniques/T1110.003/aws_mulitple_failed_console_login/aws_cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1110.003/aws_mulitple_failed_console_login/aws_cloudtrail.json",
+          "size": 35113,
+          "sha256": "2933759d957ae69868dcd693567a3ffe1d335cdf20f06fee5173249d9f171fbd",
+          "mitre_technique": [
+            "T1110.003"
+          ],
+          "descriptor": "datasets/attack_techniques/T1110.003/aws_mulitple_failed_console_login/aws_mulitple_failed_console_login.yml"
         },
         {
-          "path": "flaws_cloudtrail16.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail16.json.gz",
-          "size": 18751542,
-          "sha256": "0b575d07597988c39da91e5c55ec4b5493746012bc64e562320cf3748e363d35"
+          "path": "attack_techniques/T1110.003/aws_multiple_login_fail_per_user/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1110.003/aws_multiple_login_fail_per_user/cloudtrail.json",
+          "size": 26265,
+          "sha256": "c0a030b82103f8065913a3dd0285d0534ef421b807e06febbe73537f4f11b2e7",
+          "mitre_technique": [
+            "T1110.003"
+          ],
+          "descriptor": "datasets/attack_techniques/T1110.003/aws_multiple_login_fail_per_user/aws_multiple_login_fail_per_user_old.yml"
         },
         {
-          "path": "flaws_cloudtrail17.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail17.json.gz",
-          "size": 22812003,
-          "sha256": "7530a1865425c8476e124dbeb04fd86172165362c931d835d9323c6c173af464"
+          "path": "attack_techniques/T1119/aws_exfil_datasync/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1119/aws_exfil_datasync/cloudtrail.json",
+          "size": 8218,
+          "sha256": "3e61b4eba628eaf58e86401d834e2fa277a01e5fa65e30c34f8c60138332707c",
+          "mitre_technique": [
+            "T1119"
+          ],
+          "descriptor": "datasets/attack_techniques/T1119/aws_exfil_datasync/aws_exfil_datasync_old.yml"
         },
         {
-          "path": "flaws_cloudtrail18.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail18.json.gz",
-          "size": 19755759,
-          "sha256": "2cb4d779ecd05c6c24b595103dcd184b915162bc00f6662269b163d66978500a"
+          "path": "attack_techniques/T1201/aws_password_policy/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1201/aws_password_policy/cloudtrail.json",
+          "size": 7001,
+          "sha256": "cbd662c0a3a1f45d19c6bcc2d94dfde621111507bec87328aab8e6fdae3e10d6",
+          "mitre_technique": [
+            "T1201"
+          ],
+          "descriptor": "datasets/attack_techniques/T1201/aws_password_policy/aws_password_policy_old.yml"
         },
         {
-          "path": "flaws_cloudtrail19.json.gz",
-          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail19.json.gz",
-          "size": 4988214,
-          "sha256": "1bcf77a96388ba206ae0e960403b87e8e0000299dfcfc5e0e2d35906a06f24b2"
+          "path": "attack_techniques/T1204.003/aws_ecr_container_upload/aws_ecr_container_upload.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1204.003/aws_ecr_container_upload/aws_ecr_container_upload.json",
+          "size": 11648,
+          "sha256": "50e8726582a8e3a893ad9825e0b48b0c594d2766593949244fd36c1052ad171d",
+          "mitre_technique": [
+            "T1204.003"
+          ],
+          "descriptor": "datasets/attack_techniques/T1204.003/aws_ecr_container_upload/aws_ecr_container_upload.yml"
+        },
+        {
+          "path": "attack_techniques/T1204.003/aws_ecr_image_scanning/aws_ecr_scanning_findings_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1204.003/aws_ecr_image_scanning/aws_ecr_scanning_findings_events.json",
+          "size": 69038,
+          "sha256": "1236491f0f0998f25ad03935b294756f94d51ed931cb27d447e005c2425d7c48",
+          "mitre_technique": [
+            "T1204.003"
+          ],
+          "descriptor": "datasets/attack_techniques/T1204.003/aws_ecr_image_scanning/aws_ecr_image_scanning.yml"
+        },
+        {
+          "path": "attack_techniques/T1204/aws_updatelambdafunctioncode/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1204/aws_updatelambdafunctioncode/aws_cloudtrail_events.json",
+          "size": 3720,
+          "sha256": "253375d1c88319232712da56c44868cfbaf87da32f59dca1effa0e423223aaa3",
+          "mitre_technique": [
+            "T1204"
+          ],
+          "descriptor": "datasets/attack_techniques/T1204/aws_updatelambdafunctioncode/aws_updatelambdafunctioncode.yml"
+        },
+        {
+          "path": "attack_techniques/T1485/aws_delete_knowledge_base/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1485/aws_delete_knowledge_base/cloudtrail.json",
+          "size": 1415,
+          "sha256": "0074532dade6167059a8b32c6fc31cf16e545d2668686e5c636818b9c77742b5",
+          "mitre_technique": [
+            "T1485"
+          ],
+          "descriptor": "datasets/attack_techniques/T1485/aws_delete_knowledge_base/aws_delete_knowledge_base_old.yml"
+        },
+        {
+          "path": "attack_techniques/T1486/aws_kms_key/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1486/aws_kms_key/aws_cloudtrail_events.json",
+          "size": 984076,
+          "sha256": "8c6869476565588356d30a0c20d3767b2d64de8f871af2e97b2b0d57c4cc64b7",
+          "mitre_technique": [
+            "T1486"
+          ],
+          "descriptor": "datasets/attack_techniques/T1486/aws_kms_key/aws_kms_key.yml"
+        },
+        {
+          "path": "attack_techniques/T1486/s3_file_encryption/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1486/s3_file_encryption/aws_cloudtrail_events.json",
+          "size": 3880,
+          "sha256": "29c65aedfdb0a8b8ef56cb77af24842ec7ac5a9ad0497a186a3bda8acc411647",
+          "mitre_technique": [
+            "T1486"
+          ],
+          "descriptor": "datasets/attack_techniques/T1486/s3_file_encryption/s3_file_encryption.yml"
+        },
+        {
+          "path": "attack_techniques/T1526/aws_security_scanner/aws_security_scanner.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1526/aws_security_scanner/aws_security_scanner.json",
+          "size": 1033222,
+          "sha256": "4c7ba5d7ac8186f61acf60b6a94e5bc6c3b5a3313bc627a35998110e7103021e",
+          "mitre_technique": [
+            "T1526"
+          ],
+          "descriptor": "datasets/attack_techniques/T1526/aws_security_scanner/aws_security_scanner.yml"
+        },
+        {
+          "path": "attack_techniques/T1530/aws_cloudwatch_logs_high_volume_retrieval/aws_cloudwatch_logs_high_volume_retrieval.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1530/aws_cloudwatch_logs_high_volume_retrieval/aws_cloudwatch_logs_high_volume_retrieval.json",
+          "size": 1145400,
+          "sha256": "2bfe4a3caa9c5fbd12515328f0c2c842f4dc939179f3102e8c04f9c88737429e",
+          "mitre_technique": [
+            "T1530"
+          ],
+          "descriptor": "datasets/attack_techniques/T1530/aws_cloudwatch_logs_high_volume_retrieval/aws_cloudwatch_logs_high_volume_retrieval.yml"
+        },
+        {
+          "path": "attack_techniques/T1530/aws_exfil_high_no_getobject/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1530/aws_exfil_high_no_getobject/cloudtrail.json",
+          "size": 160393,
+          "sha256": "c71e5bf5d092955415d3a94f446681a1bc55a66f0d765b2cf9b3718edbf7461b",
+          "mitre_technique": [
+            "T1530"
+          ],
+          "descriptor": "datasets/attack_techniques/T1530/aws_exfil_high_no_getobject/aws_exfil_high_no_getobject_old.yml"
+        },
+        {
+          "path": "attack_techniques/T1530/aws_s3_public_bucket/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1530/aws_s3_public_bucket/aws_cloudtrail_events.json",
+          "size": 14518,
+          "sha256": "a7812406c446a6a2c9864f2fe3b07e6b177c18b893dbd2ed0b11b649ddfc7eda",
+          "mitre_technique": [
+            "T1530"
+          ],
+          "descriptor": "datasets/attack_techniques/T1530/aws_s3_public_bucket/aws_s3_public_bucket.yml"
+        },
+        {
+          "path": "attack_techniques/T1537/aws_ami_shared_public/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1537/aws_ami_shared_public/aws_cloudtrail_events.json",
+          "size": 2979,
+          "sha256": "f2402c34740a6c324cf61a7523bc8f19abb5a60e3a3426f8b17df620593866cf",
+          "mitre_technique": [
+            "T1537"
+          ],
+          "descriptor": "datasets/attack_techniques/T1537/aws_ami_shared_public/aws_ami_shared_public.yml"
+        },
+        {
+          "path": "attack_techniques/T1537/aws_snapshot_exfil/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1537/aws_snapshot_exfil/aws_cloudtrail_events.json",
+          "size": 11268,
+          "sha256": "ac343623bd299b4cbd29b1d718e91b51f00da71fee4fe3de26dca83205676cca",
+          "mitre_technique": [
+            "T1537"
+          ],
+          "descriptor": "datasets/attack_techniques/T1537/aws_snapshot_exfil/aws_snapshot_exfil.yml"
+        },
+        {
+          "path": "attack_techniques/T1552/aws_getpassworddata/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1552/aws_getpassworddata/aws_cloudtrail_events.json",
+          "size": 130776,
+          "sha256": "433d484e50f0e48ca86aea8bd6b38b7bfa971705799bc8be05932638122eac99",
+          "mitre_technique": [
+            "T1552"
+          ],
+          "descriptor": "datasets/attack_techniques/T1552/aws_getpassworddata/aws_getpassworddata.yml"
+        },
+        {
+          "path": "attack_techniques/T1555.006/aws_anomalous_secrets_manager_batch_retrieval/aws_anomalous_secrets_manager_batch_retrieval.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1555.006/aws_anomalous_secrets_manager_batch_retrieval/aws_anomalous_secrets_manager_batch_retrieval.json",
+          "size": 19582,
+          "sha256": "d610a9f77cdc042be6ac01f5cf7782b9fd420118df5bc90d59aa94baac0f5f06",
+          "mitre_technique": [
+            "T1555.006"
+          ],
+          "descriptor": "datasets/attack_techniques/T1555.006/aws_anomalous_secrets_manager_batch_retrieval/aws_anomalous_secrets_manager_batch_retrieval.yml"
+        },
+        {
+          "path": "attack_techniques/T1562.007/aws_create_acl/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1562.007/aws_create_acl/aws_cloudtrail_events.json",
+          "size": 16030714,
+          "sha256": "d31cf164315d63a20b92558852d11d2b00a43a31cd091b745c16e7f0c1cc306d",
+          "mitre_technique": [
+            "T1562.007"
+          ],
+          "descriptor": "datasets/attack_techniques/T1562.007/aws_create_acl/aws_create_acl.yml"
+        },
+        {
+          "path": "attack_techniques/T1562.008/aws_bedrock_delete_guardrails/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1562.008/aws_bedrock_delete_guardrails/cloudtrail.json",
+          "size": 1546,
+          "sha256": "593e72338b0aa503a829c75cd5393be3da83b5b98922905915351395e71ea05b",
+          "mitre_technique": [
+            "T1562.008"
+          ],
+          "descriptor": "datasets/attack_techniques/T1562.008/aws_bedrock_delete_guardrails/aws_bedrock_delete_guardrails_old.yml"
+        },
+        {
+          "path": "attack_techniques/T1562.008/aws_bedrock_delete_model_invocation_logging/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1562.008/aws_bedrock_delete_model_invocation_logging/cloudtrail.json",
+          "size": 1410,
+          "sha256": "8866bb9fffc8ee5aa0251f38e3d622e3f77fb075400dd7ccd2a44eef93500db7",
+          "mitre_technique": [
+            "T1562.008"
+          ],
+          "descriptor": "datasets/attack_techniques/T1562.008/aws_bedrock_delete_model_invocation_logging/aws_bedrock_delete_model_invocation_logging_old.yml"
+        },
+        {
+          "path": "attack_techniques/T1562.008/aws_delete_security_services/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1562.008/aws_delete_security_services/aws_cloudtrail_events.json",
+          "size": 8783,
+          "sha256": "140e44c51c9cdded1641053b4f5f5649860c159e65a79ccd98c68527a60034e3",
+          "mitre_technique": [
+            "T1562.008"
+          ],
+          "descriptor": "datasets/attack_techniques/T1562.008/aws_delete_security_services/aws_delete_security_services.yml"
+        },
+        {
+          "path": "attack_techniques/T1562.008/delete_cloudwatch_log_group/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1562.008/delete_cloudwatch_log_group/aws_cloudtrail_events.json",
+          "size": 3997,
+          "sha256": "86d38a605edec476f7d8a0a10daa7699e63815862d82000efc80a9b73683b30f",
+          "mitre_technique": [
+            "T1562.008"
+          ],
+          "descriptor": "datasets/attack_techniques/T1562.008/delete_cloudwatch_log_group/delete_cloudwatch_log_group.yml"
+        },
+        {
+          "path": "attack_techniques/T1562.008/put_bucketlifecycle/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1562.008/put_bucketlifecycle/aws_cloudtrail_events.json",
+          "size": 10237,
+          "sha256": "22fcd57ad927f5ec7d714206dbf44a1b853de109de0156cd1bfaf28f38b6479a",
+          "mitre_technique": [
+            "T1562.008"
+          ],
+          "descriptor": "datasets/attack_techniques/T1562.008/put_bucketlifecycle/put_bucketlifecycle.yml"
+        },
+        {
+          "path": "attack_techniques/T1562.008/stop_delete_cloudtrail/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1562.008/stop_delete_cloudtrail/aws_cloudtrail_events.json",
+          "size": 2964,
+          "sha256": "d5e6f187918ca7f668249c33e86a2dba91f37777bdb6195600512caa428d012b",
+          "mitre_technique": [
+            "T1562.008"
+          ],
+          "descriptor": "datasets/attack_techniques/T1562.008/stop_delete_cloudtrail/stop_delete_cloudtrail.yml"
+        },
+        {
+          "path": "attack_techniques/T1562.008/update_cloudtrail/aws_cloudtrail_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1562.008/update_cloudtrail/aws_cloudtrail_events.json",
+          "size": 9780,
+          "sha256": "d64b4d7d12e633c94909b81ac22a603311c50923cc77a46c1b76e4e7d0dae19b",
+          "mitre_technique": [
+            "T1562.008"
+          ],
+          "descriptor": "datasets/attack_techniques/T1562.008/update_cloudtrail/update_cloudtrail.yml"
+        },
+        {
+          "path": "attack_techniques/T1578.005/aws_ec2_startup_script_modification/aws_ec2_startup_script_modification.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1578.005/aws_ec2_startup_script_modification/aws_ec2_startup_script_modification.json",
+          "size": 3367,
+          "sha256": "5192f1accc48e2608a54f8e413264ba5b31dbeee01b9efada6ee596d5c5126be",
+          "mitre_technique": [
+            "T1578.005"
+          ],
+          "descriptor": "datasets/attack_techniques/T1578.005/aws_ec2_startup_script_modification/aws_ec2_startup_script_modification.yml"
+        },
+        {
+          "path": "attack_techniques/T1580/aws_bedrock_list_foundation_model_failures/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1580/aws_bedrock_list_foundation_model_failures/cloudtrail.json",
+          "size": 15851,
+          "sha256": "9e9d2a8e6eb06cc322f9065556a374ee77fa43b659141de7c2e99473c60b40e3",
+          "mitre_technique": [
+            "T1580"
+          ],
+          "descriptor": "datasets/attack_techniques/T1580/aws_bedrock_list_foundation_model_failures/aws_bedrock_list_foundation_model_failures_old.yml"
+        },
+        {
+          "path": "attack_techniques/T1580/aws_iam_accessdenied_discovery_events/aws_iam_accessdenied_discovery_events.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1580/aws_iam_accessdenied_discovery_events/aws_iam_accessdenied_discovery_events.json",
+          "size": 1103597,
+          "sha256": "4f52389f17745abf5fa1cf30c055d4f9d34022fcfb8e5c2544c70177da228433",
+          "mitre_technique": [
+            "T1580"
+          ],
+          "descriptor": "datasets/attack_techniques/T1580/aws_iam_accessdenied_discovery_events/data.yml"
+        },
+        {
+          "path": "attack_techniques/T1580/aws_iam_assume_role_policy_brute_force/aws_iam_assume_role_policy_brute_force.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1580/aws_iam_assume_role_policy_brute_force/aws_iam_assume_role_policy_brute_force.json",
+          "size": 15615,
+          "sha256": "93d0288274b8b32c8289df0f2226cea26adf3ccc9989f5e7c1a9fff1b25ae258",
+          "mitre_technique": [
+            "T1580"
+          ],
+          "descriptor": "datasets/attack_techniques/T1580/aws_iam_assume_role_policy_brute_force/data.yml"
+        },
+        {
+          "path": "attack_techniques/T1580/aws_iam_excessive_list_command_usage/aws_iam_excessive_list_command_usage.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1580/aws_iam_excessive_list_command_usage/aws_iam_excessive_list_command_usage.json",
+          "size": 5038501,
+          "sha256": "d0e597bf34919e87ff53d757766a71431847d8788ca80ffe78d8ac23bb498f35",
+          "mitre_technique": [
+            "T1580"
+          ],
+          "descriptor": "datasets/attack_techniques/T1580/aws_iam_excessive_list_command_usage/data.yml"
+        },
+        {
+          "path": "attack_techniques/T1586.003/aws_console_login_multiple_ips/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1586.003/aws_console_login_multiple_ips/cloudtrail.json",
+          "size": 8654,
+          "sha256": "d34e9b8c2623885b2599176297e7983ef474e022fa44808d7bd38f9f3bea631f",
+          "mitre_technique": [
+            "T1586.003"
+          ],
+          "descriptor": "datasets/attack_techniques/T1586.003/aws_console_login_multiple_ips/aws_console_login_multiple_ips_old.yml"
+        },
+        {
+          "path": "attack_techniques/T1621/aws_failed_mfa/cloudtrail.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/attack_techniques/T1621/aws_failed_mfa/cloudtrail.json",
+          "size": 16397,
+          "sha256": "1e3ac75660a40010046fa2bf68865832a35da00869617344a1f0733c03f54408",
+          "mitre_technique": [
+            "T1621"
+          ],
+          "descriptor": "datasets/attack_techniques/T1621/aws_failed_mfa/aws_failed_mfa_old.yml"
+        },
+        {
+          "path": "suspicious_behaviour/abnormally_high_cloud_instances_launched/cloudtrail_behavioural_detections.json",
+          "url": "https://media.githubusercontent.com/media/splunk/attack_data/eac2f8f675ec31a6618003399dcc53641524e673/datasets/suspicious_behaviour/abnormally_high_cloud_instances_launched/cloudtrail_behavioural_detections.json",
+          "size": 16168404,
+          "sha256": "8b50b35094902fd94bd7c86b6c48d7e226ee5a63a98436b5da8b9ee716f63d43",
+          "mitre_technique": [],
+          "descriptor": "datasets/suspicious_behaviour/abnormally_high_cloud_instances_launched/abnormally_high_cloud_instances_launched_old.yml"
+        }
+      ],
+      "excluded": [
+        {
+          "path": "datasets/attack_techniques/T1078/attach_role_trust_policy/attach_role_trust_policy.yml",
+          "reason": "named in a descriptor but not in the repo"
+        },
+        {
+          "path": "datasets/attack_techniques/T1078/attach_user_to_role/attach_user_to_role.json",
+          "reason": "Splunk search export ({preview, result} wrapper), not raw CloudTrail"
+        },
+        {
+          "path": "datasets/attack_techniques/T1078/aws_saml_access_by_provider_user_and_principal/aws_saml_access_by_provider_user_and_principal.json",
+          "reason": "Splunk search export ({preview, result} wrapper), not raw CloudTrail"
+        },
+        {
+          "path": "datasets/attack_techniques/T1078/aws_saml_update_identity_provider/aws_saml_update_identity_provider.json",
+          "reason": "Splunk search export ({preview, result} wrapper), not raw CloudTrail"
+        },
+        {
+          "path": "datasets/attack_techniques/T1078/create_IAM_role/create_IAM_role.json",
+          "reason": "Splunk search export ({preview, result} wrapper), not raw CloudTrail"
+        },
+        {
+          "path": "datasets/attack_techniques/T1078/sts_assumerole_usage/sts_assumerole_usage.json",
+          "reason": "Splunk search export ({preview, result} wrapper), not raw CloudTrail"
+        },
+        {
+          "path": "datasets/attack_techniques/T1201/aws_password_policy/amazon_security_lake.json",
+          "reason": "records lack CloudTrail core fields"
+        },
+        {
+          "path": "datasets/attack_techniques/T1204.003/risk_dataset/aws_ecr_risk_dataset.log",
+          "reason": "contains non-object JSON values"
+        },
+        {
+          "path": "datasets/attack_techniques/T1525/container_implant/container_implant_1.json",
+          "reason": "Splunk search export ({preview, result} wrapper), not raw CloudTrail"
+        },
+        {
+          "path": "datasets/attack_techniques/T1525/container_implant/container_implant_2.json",
+          "reason": "Splunk search export ({preview, result} wrapper), not raw CloudTrail"
+        },
+        {
+          "path": "datasets/attack_techniques/T1537/aws_exfil_risk_events/aws_risk.log",
+          "reason": "contains non-object JSON values"
+        },
+        {
+          "path": "datasets/attack_techniques/T1562.007/aws_delete_acl/aws_cloudtrail_events.json",
+          "reason": "byte-identical to datasets/attack_techniques/T1562.007/aws_create_acl/aws_cloudtrail_events.json"
+        },
+        {
+          "path": "datasets/attack_techniques/T552.004/certutil_exe_certificate_extraction/certutil_exe_certificate_extraction.raw",
+          "reason": "named in a descriptor but not in the repo"
         }
       ]
     }
