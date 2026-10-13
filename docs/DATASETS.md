@@ -106,14 +106,15 @@ described per dataset below.
 - **Caveats:**
   - **Not labelled by technique.** Neither the files nor the README map events to
     techniques. What the data offers: 1,146 of the 2,900 events (40%) carry a
-    `stratus-red-team_<uuid>` token in `userAgent`, with 83 distinct UUIDs, one
-    per Stratus run. The technique for each UUID still has to be inferred from
-    the API calls, and that derivation must be documented before it is used as
-    ground truth (planned for the evaluation milestone).
+    `stratus-red-team_<uuid>` token in `userAgent`, with 83 distinct UUIDs. Per
+    the Stratus source, a UUID is either one CLI command's credential check or
+    one technique execution (Terraform warm-up plus detonation, or a revert).
+    The labels derived from that, with the method, are in
+    [`labels/`](../labels/README.md).
   - **Mostly setup and background.** Of the 1,754 untagged events, 1,006 come
-    from Terraform (Stratus warm-up and clean-up of the attack infrastructure)
-    and 418 are `AWS Internal`; the rest are AWS service principals, console and
-    SDK calls.
+    from Terraform: the clean-up (`terraform destroy`), which Stratus runs
+    without its user agent; the warm-up is tagged. 418 are `AWS Internal`; the
+    rest are AWS service principals, console and SDK calls.
   - **Lab data.** One short session in a clean account: much cleaner and denser
     than production logs, and no benign baseline to speak of.
   - **Snapshot of 2023.** Stratus techniques added later are not covered.
