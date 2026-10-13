@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ctinv"
+dynamic = ["version"]
+description = "CloudTrail Investigator: offline forensic analysis of AWS CloudTrail logs (learning project)"
+requires-python = ">=3.11"
+authors = [{ name = "Kevin Mekic" }]
+dependencies = [
+    "duckdb>=1.1",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+ctinv = "ctinv.cli:main"
+
+[tool.hatch.version]
+path = "src/ctinv/__init__.py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--import-mode=importlib"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
