@@ -1,0 +1,538 @@
+{
+  "schema_version": 1,
+  "datasets": {
+    "invictus_sigma_aws": {
+      "title": "Invictus IR Sigma-AWS: CloudTrail from Stratus Red Team simulations (2023)",
+      "optional": false,
+      "source_page": "https://github.com/invictus-ir/Sigma-AWS",
+      "license": "MIT, Copyright (c) 2023 Invictus Incident Response (repository LICENSE file)",
+      "integrity": "Pinned to a git commit. Every file was verified against its git blob SHA-1 at that commit before its SHA-256 was recorded.",
+      "upstream": {
+        "repository": "https://github.com/invictus-ir/Sigma-AWS",
+        "commit": "f0d55993fb575f747cee13069adeaa999c940b14",
+        "directory": "CloudTrail"
+      },
+      "files": [
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1145Z_7xgocspSowgK0Gto.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1145Z_7xgocspSowgK0Gto.json",
+          "size": 43324,
+          "sha256": "6c5462263e132a0ef62960899dce6872cf9f6e2c5ce38e5914e49116229596f0",
+          "git_blob_sha1": "e7900f5efc0833c61a71ddb53eb80309b8d134d7"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1145Z_s7dpHbl38neqZbm2.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1145Z_s7dpHbl38neqZbm2.json",
+          "size": 74280,
+          "sha256": "adf9d37d4079d76368ab6db572b6b8bc147424c2d4cfd8b7f06f043c62a8dbe9",
+          "git_blob_sha1": "dedb8485f134128da500f1281cb6fd13960d3d3a"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1150Z_1vnLavRRp0ek1mP4.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1150Z_1vnLavRRp0ek1mP4.json",
+          "size": 2090,
+          "sha256": "fc5f81ad7ee46dd03fb99a44e28d647da13bdd177158d0d0bc4063a31daebe79",
+          "git_blob_sha1": "83b087dc60d8ea91fee784aa47242dacc526e976"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1200Z_iLj9fb7yyUG9X4Bf.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1200Z_iLj9fb7yyUG9X4Bf.json",
+          "size": 521389,
+          "sha256": "532219dbf2a5e25b6ce6cb5f0101d7163a44dfd7d68460c58614dd9337ff32cf",
+          "git_blob_sha1": "8cec6e6fa729ec5b89fbee004734269b8acfde73"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1200Z_x9kHmzMa7cx6l9wM.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1200Z_x9kHmzMa7cx6l9wM.json",
+          "size": 173877,
+          "sha256": "7db0ceb54599584f166a8413d5f17152c98bba275eaa3602f76b53b3255ad674",
+          "git_blob_sha1": "c30ce49b08dae288ae5e02368fc326488a20464a"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1205Z_1dM7GQM67kudSyGD.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1205Z_1dM7GQM67kudSyGD.json",
+          "size": 16852,
+          "sha256": "93c6883e797ca261a6604adfc9a36c4d652378c69b11a2c74a4a4be6e6dd3012",
+          "git_blob_sha1": "6279c88160495b2573ae3cc3ad9e0cf2ba541689"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1205Z_86g9Vok9HiUCgSI7.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1205Z_86g9Vok9HiUCgSI7.json",
+          "size": 23923,
+          "sha256": "a307e7fd73fe4d6c2773d307df4d54df50d45310e3e33f96029804e336e5b1fd",
+          "git_blob_sha1": "a0e0bb81968de9d8cfc5a7792de53f1d08d92e3f"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1205Z_SjF3IkuNXJkoHyar.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1205Z_SjF3IkuNXJkoHyar.json",
+          "size": 37502,
+          "sha256": "00338bd79cddbbb3254008b586839013580a78c63c188462049df80e8bf238ca",
+          "git_blob_sha1": "0ed8cd2e697e68df17c9cfe068c87194d0c487ef"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1205Z_UljXNp9xLp8nsAGc.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1205Z_UljXNp9xLp8nsAGc.json",
+          "size": 87236,
+          "sha256": "b80a0b30ed930378cabe224a74194ab0f287a87b351ffe89ee052d58a279bf5a",
+          "git_blob_sha1": "184b17a3ebf9300de92a1a78f3d9551af9b5eb14"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1205Z_dOIWyEekdNWhkpqY.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1205Z_dOIWyEekdNWhkpqY.json",
+          "size": 34005,
+          "sha256": "19a0597672c12c825013b500e5e984f7ecf3fec78c8659a668384038a805697e",
+          "git_blob_sha1": "e473764de411c565200c0815e0f92158355f4272"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1205Z_lKy08gyrqqRJyzsn.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1205Z_lKy08gyrqqRJyzsn.json",
+          "size": 1207,
+          "sha256": "aadc493e96206ae4bef807fb6d7d5e65f3aefd22cfdc357429257b9b057f01a9",
+          "git_blob_sha1": "a2cdc0616aa8b422ba1d7bfb40228ef8dff49704"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1205Z_nx9Yx1FyJdBaTqKj.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1205Z_nx9Yx1FyJdBaTqKj.json",
+          "size": 13158,
+          "sha256": "3f1965d4acecaafca089edb704eecb374280e7f8c7fd4ed4204ab06198d1f77f",
+          "git_blob_sha1": "bbef93c30971482065d9e46ea08cd92d40b9ccd1"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1205Z_zs3JGxETHr59VpkX.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1205Z_zs3JGxETHr59VpkX.json",
+          "size": 253171,
+          "sha256": "d7f2e8aaae9084f6bad66dac3488a892a30750067981ad5659441f8539a7ed5c",
+          "git_blob_sha1": "1261b7791e90fdb0c64e7815f5d313793b871544"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1210Z_2ru8PrDKZmsO3yWC.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1210Z_2ru8PrDKZmsO3yWC.json",
+          "size": 3671,
+          "sha256": "18039fbf7a8175c0765f8b48d67f69961cd2833676b4df2d7c3eca31c22800e6",
+          "git_blob_sha1": "0dfc6ba3481eb164643e2978786299376eee9fec"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1210Z_6CICdbJQM3beT7n3.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1210Z_6CICdbJQM3beT7n3.json",
+          "size": 304844,
+          "sha256": "4272d7d4c3c745da389ab51064c805fcc2131fe7b806ddfc90a500c89fcfa3cb",
+          "git_blob_sha1": "c35edeeb54fc4e14f6619128135e37dfbf44e0bd"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1210Z_QY5iPRtGUt0EpVaH.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1210Z_QY5iPRtGUt0EpVaH.json",
+          "size": 84571,
+          "sha256": "e3cb50787cc49a1f24c1dda608140c00a8d68c424df98096682ebc906fa1a06c",
+          "git_blob_sha1": "836eaf74eb78f9692af09f51d2a92c8ef65b203d"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1210Z_RBxlxVrF890sGHGg.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1210Z_RBxlxVrF890sGHGg.json",
+          "size": 23454,
+          "sha256": "9a7047d41e00ad15d0027ebd0e2d716b8b600ee89992ead4eff628c4b4e443cb",
+          "git_blob_sha1": "9a6bbb397f8cc57c6bbf4a97321c86d1b564e8dc"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1210Z_ZgEBhdXGdLTXGoIe.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1210Z_ZgEBhdXGdLTXGoIe.json",
+          "size": 1286,
+          "sha256": "ac134b76a7f448fcddad82a08caf1bef19dc61c90e1497a2a66feb8e2486e380",
+          "git_blob_sha1": "fb505db770d8e0f192f25951d2d9806f6233473f"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1210Z_bXGZYqBeCCsqWq1U.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1210Z_bXGZYqBeCCsqWq1U.json",
+          "size": 7708,
+          "sha256": "2c3146a140b32b3646687a0d8ddcb5a4c6b16329368381d04e712ba4c201a449",
+          "git_blob_sha1": "77bc625af9f993cd678e78b4e62ab1b1372bcc98"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1210Z_vj0QE0Tf5ZmzMsCo.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1210Z_vj0QE0Tf5ZmzMsCo.json",
+          "size": 185658,
+          "sha256": "0e159eeb5f59143d926a220ea3a7c37b9a8dcbedbefc199f12aa7f49c00ea376",
+          "git_blob_sha1": "7da836a3367846739e7a95561198d8c566a8ef98"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1215Z_5f9a6SYejzdNeREZ.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1215Z_5f9a6SYejzdNeREZ.json",
+          "size": 34642,
+          "sha256": "fdab33c3726cc6d6d54a206b9cacea51622bf181f26b669a7ab3133d5a5ada5b",
+          "git_blob_sha1": "d1aa763246520984f5e039813003de5ef027948f"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1215Z_MifI13MOmOjRfXzJ.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1215Z_MifI13MOmOjRfXzJ.json",
+          "size": 69121,
+          "sha256": "24a5fe7c3495f69a2bf88984253b56036593038b564fe4e43b15301bfac1458e",
+          "git_blob_sha1": "e8a02062878d735ccbee3468571a7fef13b4d326"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1215Z_P0WZuP2zvLW2RcUo.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1215Z_P0WZuP2zvLW2RcUo.json",
+          "size": 38332,
+          "sha256": "671473cbf41b065eef5cc50a82a11e4b5be549f9847c9dcf260a89e7a6285665",
+          "git_blob_sha1": "58272e22fa6063ffc2b8b2599ef82804f0df0520"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1215Z_YMDRJwtmC82bUwAo.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1215Z_YMDRJwtmC82bUwAo.json",
+          "size": 179286,
+          "sha256": "12db575e63f788eecdf029e9623e08c4b2aa8f64eb16fd1c7110c3630bbba192",
+          "git_blob_sha1": "c0fb716726f3e98ccba1031129bc824466d20c33"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1215Z_YxpR6PTmNBivhnJJ.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1215Z_YxpR6PTmNBivhnJJ.json",
+          "size": 30483,
+          "sha256": "00d6f881a044e0dac02b4e53557d90a441e34c2c2bb92e40754c719f75b4d998",
+          "git_blob_sha1": "6a9e7fd765f4e926e9677f3db584afa5e45cd85f"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1215Z_Z8x5aqgtcXn5NEG9.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1215Z_Z8x5aqgtcXn5NEG9.json",
+          "size": 146076,
+          "sha256": "6153e2d1f3bdddb117c679d512308b4319935b624ccf6735d6ccc0950c579e86",
+          "git_blob_sha1": "5f9282eb6747f1f47cf35670fbdc3d97fb5e41be"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1215Z_dTTFsx4I2m3om5Oy.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1215Z_dTTFsx4I2m3om5Oy.json",
+          "size": 1044,
+          "sha256": "874eae00b719b3029b3459c8e51f2c77a98b2e4ab6f82a8342783500548a956e",
+          "git_blob_sha1": "dd616c6894f40d558d87a3cefe3da0d9cd3c04e6"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1215Z_nBsuPO1qSTEVerMD.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1215Z_nBsuPO1qSTEVerMD.json",
+          "size": 261535,
+          "sha256": "c23afa21160ea63ce343ff4a5581b5dbf65edfb5fda19128074e680ceef03c93",
+          "git_blob_sha1": "a625a0b5a78e13a369e38cad11804dbfba5b2b46"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1220Z_8sBQhbu5YO94UV8p.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1220Z_8sBQhbu5YO94UV8p.json",
+          "size": 7231,
+          "sha256": "60de7ee3aedcc2d7252d5e05a50e7d813a641cea4201f39bcf1a3343da912e8b",
+          "git_blob_sha1": "f5d11f9b95cda0e2ab5eadca146e20a90b43e2ea"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1220Z_AkYyuTYmKtOUB1Lx.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1220Z_AkYyuTYmKtOUB1Lx.json",
+          "size": 20678,
+          "sha256": "ba1dfc7bcc329f4583378fcd556c652fd4508ce112bc9dbd86046265c5f3fb91",
+          "git_blob_sha1": "b094c02ca176e5ffa1a4bc650684d1ac4feaa45d"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1220Z_WMiHxZgr5Hdd6UDc.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1220Z_WMiHxZgr5Hdd6UDc.json",
+          "size": 18452,
+          "sha256": "f170b305c4f6a055ec2e213ea6131bdc14ba9c1ab66c32b0e89cc7a49d0ad031",
+          "git_blob_sha1": "45dc0c229b885cda69e9bcad70177f29b92ac4c0"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1220Z_ovtmbuX3ENJ119uH.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1220Z_ovtmbuX3ENJ119uH.json",
+          "size": 64866,
+          "sha256": "05e8b61e760c59ae5bc6774cf8f6c114ca0a75635da0a1170bf6b2cef25d782e",
+          "git_blob_sha1": "f413b0c30147df707b7a7a0fd80dfa5ee08e4187"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1220Z_r7NFD65BgeDMqD23.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1220Z_r7NFD65BgeDMqD23.json",
+          "size": 89139,
+          "sha256": "fe16136905025eba9ec3a023656de09de6c9346fd9c8c2ac3c7eda6113160ed3",
+          "git_blob_sha1": "0b9d4703eb02d04195a19316c9135d5b91d5ac51"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1220Z_sM25jC0Ku0QcGkDa.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1220Z_sM25jC0Ku0QcGkDa.json",
+          "size": 17733,
+          "sha256": "fe302204abe49e97c8825ce284b97972b9b656497bcb33fe6cc89690e345c06e",
+          "git_blob_sha1": "87a4cf5413e2b8fb256aae17cd5b531aa423eb66"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1225Z_4iD2boYSOwmb6sWd.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1225Z_4iD2boYSOwmb6sWd.json",
+          "size": 15855,
+          "sha256": "33f297a364e033a63e3735f53a1f9f93e5c3621ecc26b5087fe64e4694d28867",
+          "git_blob_sha1": "cff66a30f7e5f6cd56bddf69bfa448af183003f4"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1225Z_QqgbBkK0L13H8Wbv.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1225Z_QqgbBkK0L13H8Wbv.json",
+          "size": 3444,
+          "sha256": "51723b9725de62c28c92eecf081471b8e06faf085ddb56f83fa40b2ae921268d",
+          "git_blob_sha1": "b3b0fb2cf2de726c6b7c4e416ac35454ce6c782d"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1225Z_RL8g7SsRoNFvvVBW.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1225Z_RL8g7SsRoNFvvVBW.json",
+          "size": 5879,
+          "sha256": "81cf3458347d6270b13279874e69018b58dd5c37933ca16905309fdfa5fd939b",
+          "git_blob_sha1": "a9fa3b80dc88873e6db6d96c5c2023f9fc6bea2f"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1225Z_qWyTCPHzELqDMshA.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1225Z_qWyTCPHzELqDMshA.json",
+          "size": 4837,
+          "sha256": "4664679137550f36905c28a3022a505e9f9aabfeeed5e38907fbcb299de642c0",
+          "git_blob_sha1": "960adeafe39fa8160ac74ceb951913d401376f82"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1225Z_vMAR90Iiaqr6M5sR.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1225Z_vMAR90Iiaqr6M5sR.json",
+          "size": 18632,
+          "sha256": "fc357f02f47d9dcd486842a1ee1aae7eaf7ff30e8e5b163e51139e54475115c8",
+          "git_blob_sha1": "582375030a194bd9835d7d479b6dc1aa138c60ba"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_04rtp9DpvIpSZzMr.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_04rtp9DpvIpSZzMr.json",
+          "size": 25150,
+          "sha256": "b0efaf3c69b7a922c9ea92fee5378a4664206a6720f3e71c06a87ddf5819322f",
+          "git_blob_sha1": "c4a2ba18b5772942f819cdb5c8b4d2d1c1882b1b"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_9JM8uKEITHqwJKXr.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_9JM8uKEITHqwJKXr.json",
+          "size": 25994,
+          "sha256": "b21419bb7b55bedab3895f532af99479f8562b2e428bb8c7273828da37ff31c8",
+          "git_blob_sha1": "5d1bf60f4164477054101e2513c88e1f3a5d07e9"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_9SJSsrxJ0ChF5VFb.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_9SJSsrxJ0ChF5VFb.json",
+          "size": 96588,
+          "sha256": "465526269cc637a3fb56135990a6e3b9bbec64cf021603932a9951513e143a79",
+          "git_blob_sha1": "28e67cbe26e1d68414ce8f4ef2f0aa1c3f5439e2"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_9dKPuRzdLzqZRjqm.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_9dKPuRzdLzqZRjqm.json",
+          "size": 2765,
+          "sha256": "d946498fca5642c15f90eeac3bdf044cafefde3fb7eb7b62b4712d9fdbc79f7a",
+          "git_blob_sha1": "62b574a1b2f960dd7dc30bdfc6ce95aa2aec261e"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_AvIajGd5rkz6vTy4.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_AvIajGd5rkz6vTy4.json",
+          "size": 72028,
+          "sha256": "1948ad96edbd3818ecb484d4bb6af6a4c6c7ae3829da511548ab225b31188f8a",
+          "git_blob_sha1": "22b474149954bf9eefa64d01a1bb8b414b4193cb"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_GyyPwrInk2rgv8V0.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_GyyPwrInk2rgv8V0.json",
+          "size": 1938,
+          "sha256": "5727fe2a36a440e6886585b7669b216823dedbdecb4fed9e0e230ddae42dd999",
+          "git_blob_sha1": "90dabc9de62ae04977f3e35c2648c1bffcc0309f"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_KV9LZlfXqBel7nqf.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_KV9LZlfXqBel7nqf.json",
+          "size": 55594,
+          "sha256": "c468355f897de1ebcb27e785fbe88bba4ac6cdb8753a14d75f2738e05faa8a9e",
+          "git_blob_sha1": "c994cbb79ec73096967567716f9e970841018762"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_OU6Ha25B4GGhUIMr.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_OU6Ha25B4GGhUIMr.json",
+          "size": 8368,
+          "sha256": "d07214cdbda0a31747430d6c3641f01488adc9edd025c62f2518157a0a21632a",
+          "git_blob_sha1": "e5f4c29e51e3a9014d927d7b0e2156bfab3e4823"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_ZtUNbBkwAu98FPZb.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_ZtUNbBkwAu98FPZb.json",
+          "size": 95167,
+          "sha256": "9e9b3b0466fbc58e1c4f63230a46227ff066693aa51dc555ae6122a832aa6aa1",
+          "git_blob_sha1": "0912ea0d2ab2a6beab02bc8f443c59d577de78a5"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_lHgkh3VeI3XnjZSL.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_lHgkh3VeI3XnjZSL.json",
+          "size": 114451,
+          "sha256": "03dc80d052dea639348bb5de85cfc04e4e3a7e5bd6b69abf0d6795a53c37518f",
+          "git_blob_sha1": "35e992ea1175bbf70a3e84343e986917d0f0a41b"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_s2m4APJ8BhmXSIE6.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_s2m4APJ8BhmXSIE6.json",
+          "size": 2329,
+          "sha256": "b007555eec6b1646d11fd321ae4b9d9c33f55bc4734ae7542afb8805a7acce28",
+          "git_blob_sha1": "56da502b7b619a97de83548d771f3dbb30fab767"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1230Z_soULWstxp7lqsODg.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1230Z_soULWstxp7lqsODg.json",
+          "size": 4077,
+          "sha256": "e49f4da4cb01e29f1d19a4fb77b1fb1c1a6811264ce0746058b80675335f66ce",
+          "git_blob_sha1": "2e5d561d2bb7258671d491aee4bef777b46f4c17"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1235Z_Vp7r3boWJKtPb3wM.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1235Z_Vp7r3boWJKtPb3wM.json",
+          "size": 1074,
+          "sha256": "f2cd671e0b6472fc4ddeb325f837e09ad6bb77e1c6f6851ec9876e6f5fd3c0f4",
+          "git_blob_sha1": "747332adb608de6ab904c69182d2fe5b85d2fa82"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1235Z_YbVFCP9AYzJDhHV9.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1235Z_YbVFCP9AYzJDhHV9.json",
+          "size": 225571,
+          "sha256": "b8ddb7d1878f13143a23f8a84e32dee589f4d1deb72392a2b02e5541eb3651cb",
+          "git_blob_sha1": "840a0822fbdb77a45e420b427904f151ffc64150"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1235Z_kboLbHJlz2H6cLyo.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1235Z_kboLbHJlz2H6cLyo.json",
+          "size": 7301,
+          "sha256": "3399d7b944d08f89b5bc09d5ed569c7ee61875c4e59d7949607db5e45e007f95",
+          "git_blob_sha1": "bb006618afc9aef818525f5c6adae7c3baec68bc"
+        },
+        {
+          "path": "218007301253_CloudTrail_us-east-1_20230710T1240Z_C1qUFaqvZS64BcIN.json",
+          "url": "https://raw.githubusercontent.com/invictus-ir/Sigma-AWS/f0d55993fb575f747cee13069adeaa999c940b14/CloudTrail/218007301253_CloudTrail_us-east-1_20230710T1240Z_C1qUFaqvZS64BcIN.json",
+          "size": 2090,
+          "sha256": "5aad0385e130b10c9c5e451f642a4d33d6332a0d7730738ebdc6d92f3b2803c5",
+          "git_blob_sha1": "a9ce98a2d3e8db5fa23a3fe35bcdc2d2ca41afce"
+        }
+      ]
+    },
+    "flaws_cloud": {
+      "title": "flaws.cloud CloudTrail logs (Summit Route, 2020)",
+      "optional": false,
+      "source_page": "https://summitroute.com/blog/2020/10/09/public_dataset_of_cloudtrail_logs_from_flaws_cloud/",
+      "license": "No license stated by the source. Published by Summit Route (Scott Piper) as a public research dataset; the site footer reads 'All Rights Reserved'. Fetch from the source, do not redistribute.",
+      "integrity": "The source publishes no checksum. The archive SHA-256 was pinned on first download (trust on first use); members are hashed from that verified archive.",
+      "archive": {
+        "url": "https://summitroute.com/downloads/flaws_cloudtrail_logs.tar",
+        "size": 251688960,
+        "sha256": "f26c2b8da56bb00d695a57f00f86208117582b9216bb52424d68e718ca2a96aa"
+      },
+      "files": [
+        {
+          "path": "flaws_cloudtrail00.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail00.json.gz",
+          "size": 19210773,
+          "sha256": "62dadeb453cefd0ac3a863003fa340b09375380daac3009855907234fa42845e"
+        },
+        {
+          "path": "flaws_cloudtrail01.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail01.json.gz",
+          "size": 14465810,
+          "sha256": "0a41ae88793e75d027031ce5e9a2f613a458cdeb984a2e5ec95c4f08b7b661a4"
+        },
+        {
+          "path": "flaws_cloudtrail02.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail02.json.gz",
+          "size": 10039965,
+          "sha256": "9276398fe6a7434b5505b0ce50be1e1d16b066fa304659f1b234af0c315e6ad5"
+        },
+        {
+          "path": "flaws_cloudtrail03.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail03.json.gz",
+          "size": 7804367,
+          "sha256": "b3f11ca8a062f23048879f07717e4c35f225562dab051f20483cfe1100ae5c62"
+        },
+        {
+          "path": "flaws_cloudtrail04.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail04.json.gz",
+          "size": 11179161,
+          "sha256": "bab0f15bfe4a77c8557377704e745a5e4f00530c96afc5e20963c8dbf3055df4"
+        },
+        {
+          "path": "flaws_cloudtrail05.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail05.json.gz",
+          "size": 11621865,
+          "sha256": "832b45f26ddcef4e1490452152b067f653016c91020945bedbe13172f1626094"
+        },
+        {
+          "path": "flaws_cloudtrail06.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail06.json.gz",
+          "size": 10294576,
+          "sha256": "b6515ac7c49bf5f91d312d9fecb2727196b32c3617a2ef3a9c545143341ab1ae"
+        },
+        {
+          "path": "flaws_cloudtrail07.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail07.json.gz",
+          "size": 10364850,
+          "sha256": "5e360b277e6b0ddbcabb378b49b2c34d88f8c26ab9f029774d479078f3d8232b"
+        },
+        {
+          "path": "flaws_cloudtrail08.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail08.json.gz",
+          "size": 12546557,
+          "sha256": "440dd073958db7df96525f00d0e74c7156b770e0c743c659d792c069937b9331"
+        },
+        {
+          "path": "flaws_cloudtrail09.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail09.json.gz",
+          "size": 10977945,
+          "sha256": "eb33a66b5c6bc4da3cb381f50dfc75f300cea84c54388872818b5d768f759570"
+        },
+        {
+          "path": "flaws_cloudtrail10.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail10.json.gz",
+          "size": 9476616,
+          "sha256": "c424667317bb38899fb6099822519ff3f8c7170ce04c22318ceee45067572222"
+        },
+        {
+          "path": "flaws_cloudtrail11.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail11.json.gz",
+          "size": 9602951,
+          "sha256": "2302322e6fb4e8a811aaa6d22ecbe7f66866514f01f81fbfd8498aba9ea63266"
+        },
+        {
+          "path": "flaws_cloudtrail12.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail12.json.gz",
+          "size": 10968399,
+          "sha256": "2beb7dd3065885d466287b560016d53242bab999881d49e26fe402e63e734465"
+        },
+        {
+          "path": "flaws_cloudtrail13.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail13.json.gz",
+          "size": 11782289,
+          "sha256": "bea798bc93993fd0eb284445488dadd97b93ba5885817087ce711eecfb8a99f6"
+        },
+        {
+          "path": "flaws_cloudtrail14.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail14.json.gz",
+          "size": 12871431,
+          "sha256": "6cfd9f02bc50120ae0cd9d685a80088e0343e4ac643724604f7161989d2750cd"
+        },
+        {
+          "path": "flaws_cloudtrail15.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail15.json.gz",
+          "size": 12155113,
+          "sha256": "54b1bb0c990c46d445b7674e1e5343ef730f0848d5012a6c3894e58311daab87"
+        },
+        {
+          "path": "flaws_cloudtrail16.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail16.json.gz",
+          "size": 18751542,
+          "sha256": "0b575d07597988c39da91e5c55ec4b5493746012bc64e562320cf3748e363d35"
+        },
+        {
+          "path": "flaws_cloudtrail17.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail17.json.gz",
+          "size": 22812003,
+          "sha256": "7530a1865425c8476e124dbeb04fd86172165362c931d835d9323c6c173af464"
+        },
+        {
+          "path": "flaws_cloudtrail18.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail18.json.gz",
+          "size": 19755759,
+          "sha256": "2cb4d779ecd05c6c24b595103dcd184b915162bc00f6662269b163d66978500a"
+        },
+        {
+          "path": "flaws_cloudtrail19.json.gz",
+          "archive_member": "flaws_cloudtrail_logs/flaws_cloudtrail19.json.gz",
+          "size": 4988214,
+          "sha256": "1bcf77a96388ba206ae0e960403b87e8e0000299dfcfc5e0e2d35906a06f24b2"
+        }
+      ]
+    }
+  }
+}
