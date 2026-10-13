@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "dataset": "splunk_attack_data",
+  "split": "held-out test (ground rule 10)",
+  "derived_on": "2026-10-14",
+  "derived_by": "scripts/build_labels.py (method: labels/README.md)",
+  "event_content_read": false,
+  "data": {
+    "upstream": {
+      "repository": "https://github.com/splunk/attack_data",
+      "commit": "eac2f8f675ec31a6618003399dcc53641524e673"
+    },
+    "files": 49
+  },
+  "sources": {
+    "labels": "Splunk dataset descriptors (YAML), pinned in scripts/datasets.lock.json",
+    "attack": {
+      "name": "MITRE ATT&CK Enterprise",
+      "version": "20.0",
+      "repository": "https://github.com/mitre-attack/attack-stix-data",
+      "commit": "c2494b29dd268c46a5d0ea0990553e4327cd2253",
+      "path": "enterprise-attack/enterprise-attack-20.0.json",
+      "sha256": "81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352"
+    },
+    "sources_file": "labels/sources.json"
+  },
+  "notes": [
+    "attack_techniques/T1562.007/aws_delete_acl/aws_cloudtrail_events.json is byte-identical to the aws_create_acl file and was dropped as a duplicate in M2; both scenarios state T1562.007."
+  ],
+  "by_stated_technique": {
+    "(none)": [
+      "suspicious_behaviour/abnormally_high_cloud_instances_launched/cloudtrail_behavioural_detections.json"
+    ],
+    "T1021.004": [
+      "attack_techniques/T1021.008/aws_ec2_multiple_ssh_public_keys_uploaded/aws_ec2_multiple_ssh_public_keys_uploaded.json"
+    ],
+    "T1021.008": [
+      "attack_techniques/T1021.008/aws_ec2_multiple_ssh_public_keys_uploaded/aws_ec2_multiple_ssh_public_keys_uploaded.json"
+    ],
+    "T1078": [
+      "attack_techniques/T1078/assume_role_with_saml/assume_role_with_saml.json",
+      "attack_techniques/T1078/aws_create_policy_version/aws_cloudtrail_events.json",
+      "attack_techniques/T1078/aws_createaccesskey/aws_cloudtrail_events.json",
+      "attack_techniques/T1078/aws_createloginprofile/aws_cloudtrail_events.json",
+      "attack_techniques/T1078/aws_setdefaultpolicyversion/aws_cloudtrail_events.json",
+      "attack_techniques/T1078/aws_updateloginprofile/aws_cloudtrail_events.json"
+    ],
+    "T1078.004": [
+      "attack_techniques/T1078.004/aws_login_sfa/cloudtrail.json"
+    ],
+    "T1087.004": [
+      "attack_techniques/T1087.004/aws_invoke_model_access_denied/cloudtrail.json"
+    ],
+    "T1098": [
+      "attack_techniques/T1098/aws_iam_delete_policy/aws_iam_delete_policy.json",
+      "attack_techniques/T1098/aws_iam_failure_group_deletion/aws_iam_failure_group_deletion.json",
+      "attack_techniques/T1098/aws_iam_successful_group_deletion/aws_iam_successful_group_deletion.json"
+    ],
+    "T1098.003": [
+      "attack_techniques/T1098.003/aws_iam_role_created_with_external_trust/aws_iam_role_created_with_external_trust.json"
+    ],
+    "T1110.001": [
+      "attack_techniques/T1110.001/aws_login_failure/aws_cloudtrail_events.json"
+    ],
+    "T1110.002": [
+      "attack_techniques/T1110.002/aws_rds_password_reset/aws_cloudtrail_events.json"
+    ],
+    "T1110.003": [
+      "attack_techniques/T1110.003/aws_mulitple_failed_console_login/aws_cloudtrail.json",
+      "attack_techniques/T1110.003/aws_multiple_login_fail_per_user/cloudtrail.json"
+    ],
+    "T1119": [
+      "attack_techniques/T1119/aws_exfil_datasync/cloudtrail.json"
+    ],
+    "T1201": [
+      "attack_techniques/T1201/aws_password_policy/cloudtrail.json"
+    ],
+    "T1204": [
+      "attack_techniques/T1204/aws_updatelambdafunctioncode/aws_cloudtrail_events.json"
+    ],
+    "T1204.003": [
+      "attack_techniques/T1204.003/aws_ecr_container_upload/aws_ecr_container_upload.json",
+      "attack_techniques/T1204.003/aws_ecr_image_scanning/aws_ecr_scanning_findings_events.json"
+    ],
+    "T1485": [
+      "attack_techniques/T1485/aws_delete_knowledge_base/cloudtrail.json"
+    ],
+    "T1486": [
+      "attack_techniques/T1486/aws_kms_key/aws_cloudtrail_events.json",
+      "attack_techniques/T1486/s3_file_encryption/aws_cloudtrail_events.json"
+    ],
+    "T1526": [
+      "attack_techniques/T1526/aws_security_scanner/aws_security_scanner.json"
+    ],
+    "T1530": [
+      "attack_techniques/T1530/aws_cloudwatch_logs_high_volume_retrieval/aws_cloudwatch_logs_high_volume_retrieval.json",
+      "attack_techniques/T1530/aws_exfil_high_no_getobject/cloudtrail.json",
+      "attack_techniques/T1530/aws_s3_public_bucket/aws_cloudtrail_events.json"
+    ],
+    "T1537": [
+      "attack_techniques/T1537/aws_ami_shared_public/aws_cloudtrail_events.json",
+      "attack_techniques/T1537/aws_snapshot_exfil/aws_cloudtrail_events.json"
+    ],
+    "T1552": [
+      "attack_techniques/T1552/aws_getpassworddata/aws_cloudtrail_events.json"
+    ],
+    "T1555.006": [
+      "attack_techniques/T1555.006/aws_anomalous_secrets_manager_batch_retrieval/aws_anomalous_secrets_manager_batch_retrieval.json"
+    ],
+    "T1562.007": [
+      "attack_techniques/T1562.007/aws_create_acl/aws_cloudtrail_events.json"
+    ],
+    "T1562.008": [
+      "attack_techniques/T1562.008/aws_bedrock_delete_guardrails/cloudtrail.json",
+      "attack_techniques/T1562.008/aws_bedrock_delete_model_invocation_logging/cloudtrail.json",
+      "attack_techniques/T1562.008/aws_delete_security_services/aws_cloudtrail_events.json",
+      "attack_techniques/T1562.008/delete_cloudwatch_log_group/aws_cloudtrail_events.json",
+      "attack_techniques/T1562.008/put_bucketlifecycle/aws_cloudtrail_events.json",
+      "attack_techniques/T1562.008/stop_delete_cloudtrail/aws_cloudtrail_events.json",
+      "attack_techniques/T1562.008/update_cloudtrail/aws_cloudtrail_events.json"
+    ],
+    "T1578.005": [
+      "attack_techniques/T1578.005/aws_ec2_startup_script_modification/aws_ec2_startup_script_modification.json"
+    ],
+    "T1580": [
+      "attack_techniques/T1580/aws_bedrock_list_foundation_model_failures/cloudtrail.json",
+      "attack_techniques/T1580/aws_iam_accessdenied_discovery_events/aws_iam_accessdenied_discovery_events.json",
+      "attack_techniques/T1580/aws_iam_assume_role_policy_brute_force/aws_iam_assume_role_policy_brute_force.json",
+      "attack_techniques/T1580/aws_iam_excessive_list_command_usage/aws_iam_excessive_list_command_usage.json"
+    ],
+    "T1586.003": [
+      "attack_techniques/T1586.003/aws_console_login_multiple_ips/cloudtrail.json"
+    ],
+    "T1621": [
+      "attack_techniques/T1621/aws_failed_mfa/cloudtrail.json"
+    ]
+  },
+  "files": [
+    {"path": "attack_techniques/T1021.008/aws_ec2_multiple_ssh_public_keys_uploaded/aws_ec2_multiple_ssh_public_keys_uploaded.json", "sha256": "0d20787d8db59111b0e07ecbf35092c18e68a0909f531e3d8474ccf573092052", "records": 12, "scenario": "aws_ec2_multiple_ssh_public_keys_uploaded", "descriptor": "datasets/attack_techniques/T1021.008/aws_ec2_multiple_ssh_public_keys_uploaded/aws_ec2_multiple_ssh_public_keys_uploaded.yml", "stated_techniques": ["T1021.004", "T1021.008"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1021.004", "name": "SSH", "tactics": ["lateral-movement"], "stated": "T1021.004"}, {"id": "T1021.008", "name": "Direct Cloud VM Connections", "tactics": ["lateral-movement"], "stated": "T1021.008"}]},
+    {"path": "attack_techniques/T1078.004/aws_login_sfa/cloudtrail.json", "sha256": "395d8a667d12577fe83116c5fd0d850ea1b27dd21b1e303d08529869a5872b9a", "records": 2, "scenario": "aws_login_sfa", "descriptor": "datasets/attack_techniques/T1078.004/aws_login_sfa/aws_login_sfa_old.yml", "stated_techniques": ["T1078.004"], "technique_source": "directory name", "attack_v20": [{"id": "T1078.004", "name": "Cloud Accounts", "tactics": ["initial-access", "persistence", "privilege-escalation", "stealth"], "stated": "T1078.004"}]},
+    {"path": "attack_techniques/T1078/assume_role_with_saml/assume_role_with_saml.json", "sha256": "ca9dbc11aeb6b7bbde8eb3ebe92b8773ed3f6f1b5e6b3c88d9cd046785ac2209", "records": 28, "scenario": "assume_role_with_saml", "descriptor": "datasets/attack_techniques/T1078/assume_role_with_saml/assume_role_with_saml_old.yml", "stated_techniques": ["T1078"], "technique_source": "directory name", "attack_v20": [{"id": "T1078", "name": "Valid Accounts", "tactics": ["initial-access", "persistence", "privilege-escalation", "stealth"], "stated": "T1078"}]},
+    {"path": "attack_techniques/T1078/aws_create_policy_version/aws_cloudtrail_events.json", "sha256": "66170b51f3819ac9db6fbd2864557bccb351ae31b948329b10c5ba2efb278110", "records": 3, "scenario": "aws_create_policy_version", "descriptor": "datasets/attack_techniques/T1078/aws_create_policy_version/aws_create_policy_version.yml", "stated_techniques": ["T1078"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1078", "name": "Valid Accounts", "tactics": ["initial-access", "persistence", "privilege-escalation", "stealth"], "stated": "T1078"}]},
+    {"path": "attack_techniques/T1078/aws_createaccesskey/aws_cloudtrail_events.json", "sha256": "88c3aadd3cd9afc4db25fecd488b7eced3b1e0160f1f20592c043b327e853a8e", "records": 75, "scenario": "aws_createaccesskey", "descriptor": "datasets/attack_techniques/T1078/aws_createaccesskey/aws_createaccesskey.yml", "stated_techniques": ["T1078"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1078", "name": "Valid Accounts", "tactics": ["initial-access", "persistence", "privilege-escalation", "stealth"], "stated": "T1078"}]},
+    {"path": "attack_techniques/T1078/aws_createloginprofile/aws_cloudtrail_events.json", "sha256": "6825bd4e351d0bec876dd146dd0731c27b99b571c88cb6fea91dd0d447810d52", "records": 37, "scenario": "aws_createloginprofile", "descriptor": "datasets/attack_techniques/T1078/aws_createloginprofile/aws_createloginprofile.yml", "stated_techniques": ["T1078"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1078", "name": "Valid Accounts", "tactics": ["initial-access", "persistence", "privilege-escalation", "stealth"], "stated": "T1078"}]},
+    {"path": "attack_techniques/T1078/aws_setdefaultpolicyversion/aws_cloudtrail_events.json", "sha256": "2efef04769c68629d65daedfb44d3776c76f5ef5007ad8ddced9ca89ca15672d", "records": 4, "scenario": "aws_setdefaultpolicyversion", "descriptor": "datasets/attack_techniques/T1078/aws_setdefaultpolicyversion/aws_setdefaultpolicyversion.yml", "stated_techniques": ["T1078"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1078", "name": "Valid Accounts", "tactics": ["initial-access", "persistence", "privilege-escalation", "stealth"], "stated": "T1078"}]},
+    {"path": "attack_techniques/T1078/aws_updateloginprofile/aws_cloudtrail_events.json", "sha256": "8103aa638715ea463e633dc616076d7c6ff1838d796d712647cbd9a7f630278b", "records": 2, "scenario": "aws_updateloginprofile", "descriptor": "datasets/attack_techniques/T1078/aws_updateloginprofile/aws_updateloginprofile.yml", "stated_techniques": ["T1078"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1078", "name": "Valid Accounts", "tactics": ["initial-access", "persistence", "privilege-escalation", "stealth"], "stated": "T1078"}]},
+    {"path": "attack_techniques/T1087.004/aws_invoke_model_access_denied/cloudtrail.json", "sha256": "8da5f22e842c0c8cad3213028beffb8893e1de186ae07012c5b262390b98c112", "records": 1, "scenario": "aws_invoke_model_access_denied", "descriptor": "datasets/attack_techniques/T1087.004/aws_invoke_model_access_denied/aws_invoke_model_access_denied_old.yml", "stated_techniques": ["T1087.004"], "technique_source": "directory name", "attack_v20": [{"id": "T1087.004", "name": "Cloud Account", "tactics": ["discovery"], "stated": "T1087.004"}]},
+    {"path": "attack_techniques/T1098.003/aws_iam_role_created_with_external_trust/aws_iam_role_created_with_external_trust.json", "sha256": "78afdd5eac72d57e581137283274310161281ecc9a1c0c8c94adfcad3d30cb23", "records": 2, "scenario": "aws_iam_role_created_with_external_trust", "descriptor": "datasets/attack_techniques/T1098.003/aws_iam_role_created_with_external_trust/aws_iam_role_created_with_external_trust.yml", "stated_techniques": ["T1098.003"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1098.003", "name": "Additional Cloud Roles", "tactics": ["persistence", "privilege-escalation"], "stated": "T1098.003"}]},
+    {"path": "attack_techniques/T1098/aws_iam_delete_policy/aws_iam_delete_policy.json", "sha256": "862f9c73569bcdd38006b242bcdcd82b1424cabaaee01c4f931732e5f4c04b33", "records": 116, "scenario": "aws_iam_delete_policy", "descriptor": "datasets/attack_techniques/T1098/aws_iam_delete_policy/data.yml", "stated_techniques": ["T1098"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1098", "name": "Account Manipulation", "tactics": ["persistence", "privilege-escalation"], "stated": "T1098"}]},
+    {"path": "attack_techniques/T1098/aws_iam_failure_group_deletion/aws_iam_failure_group_deletion.json", "sha256": "3dae36751402bc19f86cecfac3f622ac41ef6d4c4ede6f334e3b7fbcde35a991", "records": 50, "scenario": "aws_iam_failure_group_deletion", "descriptor": "datasets/attack_techniques/T1098/aws_iam_failure_group_deletion/data.yml", "stated_techniques": ["T1098"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1098", "name": "Account Manipulation", "tactics": ["persistence", "privilege-escalation"], "stated": "T1098"}]},
+    {"path": "attack_techniques/T1098/aws_iam_successful_group_deletion/aws_iam_successful_group_deletion.json", "sha256": "6f526a69b82e0d53ef733e79f44e6422bd599af51d2f31896b853ded069c3396", "records": 93, "scenario": "aws_iam_successful_group_deletion", "descriptor": "datasets/attack_techniques/T1098/aws_iam_successful_group_deletion/data.yml", "stated_techniques": ["T1098"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1098", "name": "Account Manipulation", "tactics": ["persistence", "privilege-escalation"], "stated": "T1098"}]},
+    {"path": "attack_techniques/T1110.001/aws_login_failure/aws_cloudtrail_events.json", "sha256": "d9d0ebbaf9a6aebd504b03f665eb1f35dfee4e34c0c6a5cf1c5318b7a12c1e9b", "records": 7, "scenario": "aws_login_failure", "descriptor": "datasets/attack_techniques/T1110.001/aws_login_failure/aws_login_failure.yml", "stated_techniques": ["T1110.001"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1110.001", "name": "Password Guessing", "tactics": ["credential-access"], "stated": "T1110.001"}]},
+    {"path": "attack_techniques/T1110.002/aws_rds_password_reset/aws_cloudtrail_events.json", "sha256": "7015688e41e2afca485d25fcf1fc2e655402fc036e372ca0ad6d2fefc9430c1f", "records": 2, "scenario": "aws_rds_password_reset", "descriptor": "datasets/attack_techniques/T1110.002/aws_rds_password_reset/aws_rds_password_reset.yml", "stated_techniques": ["T1110.002"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1110.002", "name": "Password Cracking", "tactics": ["credential-access"], "stated": "T1110.002"}]},
+    {"path": "attack_techniques/T1110.003/aws_mulitple_failed_console_login/aws_cloudtrail.json", "sha256": "2933759d957ae69868dcd693567a3ffe1d335cdf20f06fee5173249d9f171fbd", "records": 31, "scenario": "aws_mulitple_failed_console_login", "descriptor": "datasets/attack_techniques/T1110.003/aws_mulitple_failed_console_login/aws_mulitple_failed_console_login.yml", "stated_techniques": ["T1110.003"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1110.003", "name": "Password Spraying", "tactics": ["credential-access"], "stated": "T1110.003"}]},
+    {"path": "attack_techniques/T1110.003/aws_multiple_login_fail_per_user/cloudtrail.json", "sha256": "c0a030b82103f8065913a3dd0285d0534ef421b807e06febbe73537f4f11b2e7", "records": 28, "scenario": "aws_multiple_login_fail_per_user", "descriptor": "datasets/attack_techniques/T1110.003/aws_multiple_login_fail_per_user/aws_multiple_login_fail_per_user_old.yml", "stated_techniques": ["T1110.003"], "technique_source": "directory name", "attack_v20": [{"id": "T1110.003", "name": "Password Spraying", "tactics": ["credential-access"], "stated": "T1110.003"}]},
+    {"path": "attack_techniques/T1119/aws_exfil_datasync/cloudtrail.json", "sha256": "3e61b4eba628eaf58e86401d834e2fa277a01e5fa65e30c34f8c60138332707c", "records": 5, "scenario": "aws_exfil_datasync", "descriptor": "datasets/attack_techniques/T1119/aws_exfil_datasync/aws_exfil_datasync_old.yml", "stated_techniques": ["T1119"], "technique_source": "directory name", "attack_v20": [{"id": "T1119", "name": "Automated Collection", "tactics": ["collection"], "stated": "T1119"}]},
+    {"path": "attack_techniques/T1201/aws_password_policy/cloudtrail.json", "sha256": "cbd662c0a3a1f45d19c6bcc2d94dfde621111507bec87328aab8e6fdae3e10d6", "records": 7, "scenario": "aws_password_policy", "descriptor": "datasets/attack_techniques/T1201/aws_password_policy/aws_password_policy_old.yml", "stated_techniques": ["T1201"], "technique_source": "directory name", "attack_v20": [{"id": "T1201", "name": "Password Policy Discovery", "tactics": ["discovery"], "stated": "T1201"}]},
+    {"path": "attack_techniques/T1204.003/aws_ecr_container_upload/aws_ecr_container_upload.json", "sha256": "50e8726582a8e3a893ad9825e0b48b0c594d2766593949244fd36c1052ad171d", "records": 2, "scenario": "aws_ecr_container_upload", "descriptor": "datasets/attack_techniques/T1204.003/aws_ecr_container_upload/aws_ecr_container_upload.yml", "stated_techniques": ["T1204.003"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1204.003", "name": "Malicious Image", "tactics": ["execution"], "stated": "T1204.003"}]},
+    {"path": "attack_techniques/T1204.003/aws_ecr_image_scanning/aws_ecr_scanning_findings_events.json", "sha256": "1236491f0f0998f25ad03935b294756f94d51ed931cb27d447e005c2425d7c48", "records": 1, "scenario": "aws_ecr_image_scanning", "descriptor": "datasets/attack_techniques/T1204.003/aws_ecr_image_scanning/aws_ecr_image_scanning.yml", "stated_techniques": ["T1204.003"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1204.003", "name": "Malicious Image", "tactics": ["execution"], "stated": "T1204.003"}]},
+    {"path": "attack_techniques/T1204/aws_updatelambdafunctioncode/aws_cloudtrail_events.json", "sha256": "253375d1c88319232712da56c44868cfbaf87da32f59dca1effa0e423223aaa3", "records": 2, "scenario": "aws_updatelambdafunctioncode", "descriptor": "datasets/attack_techniques/T1204/aws_updatelambdafunctioncode/aws_updatelambdafunctioncode.yml", "stated_techniques": ["T1204"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1204", "name": "User Execution", "tactics": ["execution"], "stated": "T1204"}]},
+    {"path": "attack_techniques/T1485/aws_delete_knowledge_base/cloudtrail.json", "sha256": "0074532dade6167059a8b32c6fc31cf16e545d2668686e5c636818b9c77742b5", "records": 1, "scenario": "aws_delete_knowledge_base", "descriptor": "datasets/attack_techniques/T1485/aws_delete_knowledge_base/aws_delete_knowledge_base_old.yml", "stated_techniques": ["T1485"], "technique_source": "directory name", "attack_v20": [{"id": "T1485", "name": "Data Destruction", "tactics": ["impact"], "stated": "T1485"}]},
+    {"path": "attack_techniques/T1486/aws_kms_key/aws_cloudtrail_events.json", "sha256": "8c6869476565588356d30a0c20d3767b2d64de8f871af2e97b2b0d57c4cc64b7", "records": 674, "scenario": "aws_kms_key", "descriptor": "datasets/attack_techniques/T1486/aws_kms_key/aws_kms_key.yml", "stated_techniques": ["T1486"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1486", "name": "Data Encrypted for Impact", "tactics": ["impact"], "stated": "T1486"}]},
+    {"path": "attack_techniques/T1486/s3_file_encryption/aws_cloudtrail_events.json", "sha256": "29c65aedfdb0a8b8ef56cb77af24842ec7ac5a9ad0497a186a3bda8acc411647", "records": 2, "scenario": "s3_file_encryption", "descriptor": "datasets/attack_techniques/T1486/s3_file_encryption/s3_file_encryption.yml", "stated_techniques": ["T1486"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1486", "name": "Data Encrypted for Impact", "tactics": ["impact"], "stated": "T1486"}]},
+    {"path": "attack_techniques/T1526/aws_security_scanner/aws_security_scanner.json", "sha256": "4c7ba5d7ac8186f61acf60b6a94e5bc6c3b5a3313bc627a35998110e7103021e", "records": 1071, "scenario": "aws_security_scanner", "descriptor": "datasets/attack_techniques/T1526/aws_security_scanner/aws_security_scanner.yml", "stated_techniques": ["T1526"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1526", "name": "Cloud Service Discovery", "tactics": ["discovery"], "stated": "T1526"}]},
+    {"path": "attack_techniques/T1530/aws_cloudwatch_logs_high_volume_retrieval/aws_cloudwatch_logs_high_volume_retrieval.json", "sha256": "2bfe4a3caa9c5fbd12515328f0c2c842f4dc939179f3102e8c04f9c88737429e", "records": 650, "scenario": "aws_cloudwatch_logs_high_volume_retrieval", "descriptor": "datasets/attack_techniques/T1530/aws_cloudwatch_logs_high_volume_retrieval/aws_cloudwatch_logs_high_volume_retrieval.yml", "stated_techniques": ["T1530"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1530", "name": "Data from Cloud Storage", "tactics": ["collection"], "stated": "T1530"}]},
+    {"path": "attack_techniques/T1530/aws_exfil_high_no_getobject/cloudtrail.json", "sha256": "c71e5bf5d092955415d3a94f446681a1bc55a66f0d765b2cf9b3718edbf7461b", "records": 100, "scenario": "aws_exfil_high_no_getobject", "descriptor": "datasets/attack_techniques/T1530/aws_exfil_high_no_getobject/aws_exfil_high_no_getobject_old.yml", "stated_techniques": ["T1530"], "technique_source": "directory name", "attack_v20": [{"id": "T1530", "name": "Data from Cloud Storage", "tactics": ["collection"], "stated": "T1530"}]},
+    {"path": "attack_techniques/T1530/aws_s3_public_bucket/aws_cloudtrail_events.json", "sha256": "a7812406c446a6a2c9864f2fe3b07e6b177c18b893dbd2ed0b11b649ddfc7eda", "records": 9, "scenario": "aws_s3_public_bucket", "descriptor": "datasets/attack_techniques/T1530/aws_s3_public_bucket/aws_s3_public_bucket.yml", "stated_techniques": ["T1530"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1530", "name": "Data from Cloud Storage", "tactics": ["collection"], "stated": "T1530"}]},
+    {"path": "attack_techniques/T1537/aws_ami_shared_public/aws_cloudtrail_events.json", "sha256": "f2402c34740a6c324cf61a7523bc8f19abb5a60e3a3426f8b17df620593866cf", "records": 2, "scenario": "aws_ami_shared_public", "descriptor": "datasets/attack_techniques/T1537/aws_ami_shared_public/aws_ami_shared_public.yml", "stated_techniques": ["T1537"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1537", "name": "Transfer Data to Cloud Account", "tactics": ["exfiltration"], "stated": "T1537"}]},
+    {"path": "attack_techniques/T1537/aws_snapshot_exfil/aws_cloudtrail_events.json", "sha256": "ac343623bd299b4cbd29b1d718e91b51f00da71fee4fe3de26dca83205676cca", "records": 9, "scenario": "aws_snapshot_exfil", "descriptor": "datasets/attack_techniques/T1537/aws_snapshot_exfil/aws_snapshot_exfil.yml", "stated_techniques": ["T1537"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1537", "name": "Transfer Data to Cloud Account", "tactics": ["exfiltration"], "stated": "T1537"}]},
+    {"path": "attack_techniques/T1552/aws_getpassworddata/aws_cloudtrail_events.json", "sha256": "433d484e50f0e48ca86aea8bd6b38b7bfa971705799bc8be05932638122eac99", "records": 60, "scenario": "aws_getpassworddata", "descriptor": "datasets/attack_techniques/T1552/aws_getpassworddata/aws_getpassworddata.yml", "stated_techniques": ["T1552"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1552", "name": "Unsecured Credentials", "tactics": ["credential-access"], "stated": "T1552"}]},
+    {"path": "attack_techniques/T1555.006/aws_anomalous_secrets_manager_batch_retrieval/aws_anomalous_secrets_manager_batch_retrieval.json", "sha256": "d610a9f77cdc042be6ac01f5cf7782b9fd420118df5bc90d59aa94baac0f5f06", "records": 13, "scenario": "aws_anomalous_secrets_manager_batch_retrieval", "descriptor": "datasets/attack_techniques/T1555.006/aws_anomalous_secrets_manager_batch_retrieval/aws_anomalous_secrets_manager_batch_retrieval.yml", "stated_techniques": ["T1555.006"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1555.006", "name": "Cloud Secrets Management Stores", "tactics": ["credential-access"], "stated": "T1555.006"}]},
+    {"path": "attack_techniques/T1562.007/aws_create_acl/aws_cloudtrail_events.json", "sha256": "d31cf164315d63a20b92558852d11d2b00a43a31cd091b745c16e7f0c1cc306d", "records": 13274, "scenario": "aws_create_acl", "descriptor": "datasets/attack_techniques/T1562.007/aws_create_acl/aws_create_acl.yml", "stated_techniques": ["T1562.007"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1686.001", "name": "Cloud Firewall", "tactics": ["defense-impairment"], "stated": "T1562.007 (revoked in ATT&CK)"}]},
+    {"path": "attack_techniques/T1562.008/aws_bedrock_delete_guardrails/cloudtrail.json", "sha256": "593e72338b0aa503a829c75cd5393be3da83b5b98922905915351395e71ea05b", "records": 1, "scenario": "aws_bedrock_delete_guardrails", "descriptor": "datasets/attack_techniques/T1562.008/aws_bedrock_delete_guardrails/aws_bedrock_delete_guardrails_old.yml", "stated_techniques": ["T1562.008"], "technique_source": "directory name", "attack_v20": [{"id": "T1685.002", "name": "Disable or Modify Cloud Log", "tactics": ["defense-impairment"], "stated": "T1562.008 (revoked in ATT&CK)"}]},
+    {"path": "attack_techniques/T1562.008/aws_bedrock_delete_model_invocation_logging/cloudtrail.json", "sha256": "8866bb9fffc8ee5aa0251f38e3d622e3f77fb075400dd7ccd2a44eef93500db7", "records": 1, "scenario": "aws_bedrock_delete_model_invocation_logging", "descriptor": "datasets/attack_techniques/T1562.008/aws_bedrock_delete_model_invocation_logging/aws_bedrock_delete_model_invocation_logging_old.yml", "stated_techniques": ["T1562.008"], "technique_source": "directory name", "attack_v20": [{"id": "T1685.002", "name": "Disable or Modify Cloud Log", "tactics": ["defense-impairment"], "stated": "T1562.008 (revoked in ATT&CK)"}]},
+    {"path": "attack_techniques/T1562.008/aws_delete_security_services/aws_cloudtrail_events.json", "sha256": "140e44c51c9cdded1641053b4f5f5649860c159e65a79ccd98c68527a60034e3", "records": 8, "scenario": "aws_delete_security_services", "descriptor": "datasets/attack_techniques/T1562.008/aws_delete_security_services/aws_delete_security_services.yml", "stated_techniques": ["T1562.008"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1685.002", "name": "Disable or Modify Cloud Log", "tactics": ["defense-impairment"], "stated": "T1562.008 (revoked in ATT&CK)"}]},
+    {"path": "attack_techniques/T1562.008/delete_cloudwatch_log_group/aws_cloudtrail_events.json", "sha256": "86d38a605edec476f7d8a0a10daa7699e63815862d82000efc80a9b73683b30f", "records": 4, "scenario": "delete_cloudwatch_log_group", "descriptor": "datasets/attack_techniques/T1562.008/delete_cloudwatch_log_group/delete_cloudwatch_log_group.yml", "stated_techniques": ["T1562.008"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1685.002", "name": "Disable or Modify Cloud Log", "tactics": ["defense-impairment"], "stated": "T1562.008 (revoked in ATT&CK)"}]},
+    {"path": "attack_techniques/T1562.008/put_bucketlifecycle/aws_cloudtrail_events.json", "sha256": "22fcd57ad927f5ec7d714206dbf44a1b853de109de0156cd1bfaf28f38b6479a", "records": 5, "scenario": "put_bucketlifecycle", "descriptor": "datasets/attack_techniques/T1562.008/put_bucketlifecycle/put_bucketlifecycle.yml", "stated_techniques": ["T1562.008"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1685.002", "name": "Disable or Modify Cloud Log", "tactics": ["defense-impairment"], "stated": "T1562.008 (revoked in ATT&CK)"}]},
+    {"path": "attack_techniques/T1562.008/stop_delete_cloudtrail/aws_cloudtrail_events.json", "sha256": "d5e6f187918ca7f668249c33e86a2dba91f37777bdb6195600512caa428d012b", "records": 3, "scenario": "stop_delete_cloudtrail", "descriptor": "datasets/attack_techniques/T1562.008/stop_delete_cloudtrail/stop_delete_cloudtrail.yml", "stated_techniques": ["T1562.008"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1685.002", "name": "Disable or Modify Cloud Log", "tactics": ["defense-impairment"], "stated": "T1562.008 (revoked in ATT&CK)"}]},
+    {"path": "attack_techniques/T1562.008/update_cloudtrail/aws_cloudtrail_events.json", "sha256": "d64b4d7d12e633c94909b81ac22a603311c50923cc77a46c1b76e4e7d0dae19b", "records": 7, "scenario": "update_cloudtrail", "descriptor": "datasets/attack_techniques/T1562.008/update_cloudtrail/update_cloudtrail.yml", "stated_techniques": ["T1562.008"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1685.002", "name": "Disable or Modify Cloud Log", "tactics": ["defense-impairment"], "stated": "T1562.008 (revoked in ATT&CK)"}]},
+    {"path": "attack_techniques/T1578.005/aws_ec2_startup_script_modification/aws_ec2_startup_script_modification.json", "sha256": "5192f1accc48e2608a54f8e413264ba5b31dbeee01b9efada6ee596d5c5126be", "records": 2, "scenario": "aws_ec2_startup_script_modification", "descriptor": "datasets/attack_techniques/T1578.005/aws_ec2_startup_script_modification/aws_ec2_startup_script_modification.yml", "stated_techniques": ["T1578.005"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1578.005", "name": "Modify Cloud Compute Configurations", "tactics": ["defense-impairment"], "stated": "T1578.005"}]},
+    {"path": "attack_techniques/T1580/aws_bedrock_list_foundation_model_failures/cloudtrail.json", "sha256": "9e9d2a8e6eb06cc322f9065556a374ee77fa43b659141de7c2e99473c60b40e3", "records": 12, "scenario": "aws_bedrock_list_foundation_model_failures", "descriptor": "datasets/attack_techniques/T1580/aws_bedrock_list_foundation_model_failures/aws_bedrock_list_foundation_model_failures_old.yml", "stated_techniques": ["T1580"], "technique_source": "directory name", "attack_v20": [{"id": "T1580", "name": "Cloud Infrastructure Discovery", "tactics": ["discovery"], "stated": "T1580"}]},
+    {"path": "attack_techniques/T1580/aws_iam_accessdenied_discovery_events/aws_iam_accessdenied_discovery_events.json", "sha256": "4f52389f17745abf5fa1cf30c055d4f9d34022fcfb8e5c2544c70177da228433", "records": 1150, "scenario": "aws_iam_accessdenied_discovery_events", "descriptor": "datasets/attack_techniques/T1580/aws_iam_accessdenied_discovery_events/data.yml", "stated_techniques": ["T1580"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1580", "name": "Cloud Infrastructure Discovery", "tactics": ["discovery"], "stated": "T1580"}]},
+    {"path": "attack_techniques/T1580/aws_iam_assume_role_policy_brute_force/aws_iam_assume_role_policy_brute_force.json", "sha256": "93d0288274b8b32c8289df0f2226cea26adf3ccc9989f5e7c1a9fff1b25ae258", "records": 10, "scenario": "aws_iam_assume_role_policy_brute_force", "descriptor": "datasets/attack_techniques/T1580/aws_iam_assume_role_policy_brute_force/data.yml", "stated_techniques": ["T1580"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1580", "name": "Cloud Infrastructure Discovery", "tactics": ["discovery"], "stated": "T1580"}]},
+    {"path": "attack_techniques/T1580/aws_iam_excessive_list_command_usage/aws_iam_excessive_list_command_usage.json", "sha256": "d0e597bf34919e87ff53d757766a71431847d8788ca80ffe78d8ac23bb498f35", "records": 4196, "scenario": "aws_iam_excessive_list_command_usage", "descriptor": "datasets/attack_techniques/T1580/aws_iam_excessive_list_command_usage/data.yml", "stated_techniques": ["T1580"], "technique_source": "descriptor field mitre_technique", "attack_v20": [{"id": "T1580", "name": "Cloud Infrastructure Discovery", "tactics": ["discovery"], "stated": "T1580"}]},
+    {"path": "attack_techniques/T1586.003/aws_console_login_multiple_ips/cloudtrail.json", "sha256": "d34e9b8c2623885b2599176297e7983ef474e022fa44808d7bd38f9f3bea631f", "records": 8, "scenario": "aws_console_login_multiple_ips", "descriptor": "datasets/attack_techniques/T1586.003/aws_console_login_multiple_ips/aws_console_login_multiple_ips_old.yml", "stated_techniques": ["T1586.003"], "technique_source": "directory name", "attack_v20": [{"id": "T1586.003", "name": "Cloud Accounts", "tactics": ["resource-development"], "stated": "T1586.003"}]},
+    {"path": "attack_techniques/T1621/aws_failed_mfa/cloudtrail.json", "sha256": "1e3ac75660a40010046fa2bf68865832a35da00869617344a1f0733c03f54408", "records": 14, "scenario": "aws_failed_mfa", "descriptor": "datasets/attack_techniques/T1621/aws_failed_mfa/aws_failed_mfa_old.yml", "stated_techniques": ["T1621"], "technique_source": "directory name", "attack_v20": [{"id": "T1621", "name": "Multi-Factor Authentication Request Generation", "tactics": ["credential-access"], "stated": "T1621"}]},
+    {"path": "suspicious_behaviour/abnormally_high_cloud_instances_launched/cloudtrail_behavioural_detections.json", "sha256": "8b50b35094902fd94bd7c86b6c48d7e226ee5a63a98436b5da8b9ee716f63d43", "records": 8100, "scenario": "abnormally_high_cloud_instances_launched", "descriptor": "datasets/suspicious_behaviour/abnormally_high_cloud_instances_launched/abnormally_high_cloud_instances_launched_old.yml", "stated_techniques": [], "technique_source": "directory name", "attack_v20": []}
+  ]
+}
