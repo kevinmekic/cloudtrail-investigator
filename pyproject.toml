@@ -30,6 +30,9 @@ path = "src/ctinv/__init__.py"
 testpaths = ["tests"]
 pythonpath = ["scripts", "tests"]
 addopts = ["-ra", "--strict-markers", "--import-mode=importlib"]
+markers = [
+    "datasets: needs the fetched datasets in data/ (skipped if absent; deselect with -m 'not datasets')",
+]
 
 [tool.ruff]
 line-length = 100
