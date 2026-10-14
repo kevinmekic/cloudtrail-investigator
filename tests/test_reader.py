@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ctinv.reader import RecordFormatError, iter_records
+from ctinv.reader import MalformedRecord, RecordFormatError, iter_records
 
 ACCOUNT_ID = "111122223333"
 
@@ -106,3 +106,43 @@ def test_oversized_record_is_bounded(tmp_path: Path) -> None:
     path = write(tmp_path / "log.json", '{"Records": [{"eventID": "' + "x" * 10_000)
     with pytest.raises(RecordFormatError, match="exceeds"):
         list(iter_records(path, chunk_chars=256, max_record_chars=1_000))
+
+
+def test_invalid_line_is_detected_without_reading_ahead(tmp_path: Path) -> None:
+    # The error is inside the buffered data, so it must not be mistaken for a
+    # record cut off at the chunk boundary (which would buffer up to the limit).
+    lines = ndjson(EVENTS[:1]) + "{not json}\n" + ndjson(EVENTS[1:]) * 50
+    path = write(tmp_path / "log.json", lines)
+    with pytest.raises(RecordFormatError, match="invalid JSON"):
+        list(iter_records(path, chunk_chars=64, max_record_chars=500))
+
+
+@pytest.mark.parametrize("chunk_chars", [1, 7, 4096])
+def test_recover_skips_invalid_lines_and_continues(tmp_path: Path, chunk_chars: int) -> None:
+    text = ndjson(EVENTS[:2]) + '{"eventID": "broken", \n' + "garbage line\n" + ndjson(EVENTS[2:])
+    path = write(tmp_path / "log.json", text)
+    records = list(iter_records(path, recover=True, chunk_chars=chunk_chars))
+    assert records[:2] == EVENTS[:2]
+    assert isinstance(records[2], MalformedRecord)
+    assert records[2].reason.startswith("invalid JSON")
+    assert records[2].text == '{"eventID": "broken", \ngarbage line'
+    assert records[3:] == EVENTS[2:]
+
+
+def test_recover_keeps_invalid_text_at_end_of_file(tmp_path: Path) -> None:
+    path = write(tmp_path / "log.json", ndjson(EVENTS[:1]) + '{"eventID": "cut')
+    records = list(iter_records(path, recover=True))
+    assert records[0] == EVENTS[0]
+    assert records[1] == MalformedRecord(reason=records[1].reason, text='{"eventID": "cut')
+
+
+@pytest.mark.parametrize("chunk_chars", [1, 5, 64])
+def test_recover_accepts_valid_pretty_printed_json(tmp_path: Path, chunk_chars: int) -> None:
+    path = write(tmp_path / "log.json", json.dumps(EVENTS[0], indent=2))
+    assert list(iter_records(path, recover=True, chunk_chars=chunk_chars)) == [EVENTS[0]]
+
+
+def test_recover_does_not_resynchronise_an_envelope(tmp_path: Path) -> None:
+    text = '{"Records": [' + json.dumps(EVENTS[0]) + ", {bad}, " + json.dumps(EVENTS[1]) + "]}"
+    with pytest.raises(RecordFormatError, match="invalid JSON"):
+        list(iter_records(write(tmp_path / "log.json", text), recover=True))
