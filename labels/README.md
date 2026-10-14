@@ -11,10 +11,13 @@ without any detection logic, so the evaluation (M8) cannot become circular.
 | `SHA256SUMS` | Hashes of the three files above; `tests/test_labels.py` fails if any of them changes |
 
 **Frozen means:** these files must not change once rule work (M4) starts. A
-change needs a Log entry in `PROJECT_PLAN.md` with the reason, then an updated
+change needs a documented reason in the project log, then an updated
 `SHA256SUMS`; the test makes a silent change impossible.
 
-## Dev/test split (ground rule 10)
+## Dev/test split
+
+The label files refer to this split as "ground rule 10" of the project's
+working rules.
 
 | Dataset | Split | Labels |
 |---|---|---|
@@ -34,7 +37,7 @@ separately as "development set, optimistic".
 | Invictus data | `invictus-ir/Sigma-AWS` @ `f0d5599`, files pinned in `scripts/datasets.lock.json` | the labels are bound to these exact files (hash-checked before labelling) |
 | Stratus Red Team, behaviour | v2.8.0 (`53140a3`) | latest release before the data was recorded (2023-07-10); has the 27 AWS techniques the Invictus README names. The data does not reveal the exact release, but the AWS technique code, the runner, the providers and the CLI commands are **identical in v2.5.7, v2.6.0, v2.7.0 and v2.8.0** (checked with `diff`), so any release in that range gives the same labels. v2.8.1 differs in 3 techniques but was released on 2023-07-25, after the data. |
 | Stratus Red Team, mappings | v2.37.0 (`338bc60`) | current release; v2.8.0 states only ATT&CK *tactics*, later releases add technique IDs (see below). All 27 technique IDs still exist there. |
-| MITRE ATT&CK Enterprise | 20.0, `mitre-attack/attack-stix-data` @ `c2494b2`, file SHA-256 `81113ba9…` | current release; used to check every stated ID and to follow `revoked-by` links |
+| MITRE ATT&CK Enterprise | 20.0 (released 2026-10-13), `mitre-attack/attack-stix-data` @ `c2494b2`, file SHA-256 `81113ba9…` | current release; used to check every stated ID and to follow `revoked-by` links |
 | Splunk attack_data | `splunk/attack_data` @ `eac2f8f` | same commit as the downloaded files |
 
 `python scripts/build_labels.py --refresh-sources` recreates `sources.json`
@@ -172,17 +175,17 @@ does not have permission to do so". All error codes are in
 | `aws.credential-access.ec2-steal-instance-credentials` | detonated | 32 | T1552.005 | T1552.005 |
 | `aws.credential-access.secretsmanager-retrieve-secrets` | detonated | 21 | – (tactics only) | – |
 | `aws.credential-access.ssm-retrieve-securestring-parameters` | detonated | 10 | – (tactics only) | – |
-| `aws.defense-evasion.cloudtrail-delete` | detonated, all attack calls failed | 1 | T1562.008 | T1685.002 |
-| `aws.defense-evasion.cloudtrail-event-selectors` | detonated | 1 | T1562.008 | T1685.002 |
-| `aws.defense-evasion.cloudtrail-lifecycle-rule` | detonated | 1 | T1562.008 | T1685.002 |
-| `aws.defense-evasion.cloudtrail-stop` | detonated, all attack calls failed | 3 | T1562.008 | T1685.002 |
+| `aws.defense-evasion.cloudtrail-delete` | detonated, all attack calls failed | 1 | T1562.008 | T1685.002 (formerly T1562.008) |
+| `aws.defense-evasion.cloudtrail-event-selectors` | detonated | 1 | T1562.008 | T1685.002 (formerly T1562.008) |
+| `aws.defense-evasion.cloudtrail-lifecycle-rule` | detonated | 1 | T1562.008 | T1685.002 (formerly T1562.008) |
+| `aws.defense-evasion.cloudtrail-stop` | detonated, all attack calls failed | 3 | T1562.008 | T1685.002 (formerly T1562.008) |
 | `aws.defense-evasion.organizations-leave` | detonated | 6 | T1666.A002 | – |
 | `aws.defense-evasion.vpc-remove-flow-logs` | detonated | 1 | – (tactics only) | – |
 | `aws.discovery.ec2-download-user-data` | detonated | 20 | – (tactics only) | – |
 | `aws.discovery.ec2-enumerate-from-instance` | detonated, all attack calls failed | 1 | – (tactics only) | – |
 | `aws.execution.ec2-launch-unusual-instances` | detonated | 10 | T1496.A008, T1578.002 | T1578.002 |
 | `aws.execution.ec2-user-data` | not detonated (warm-up failed) | 0 | – (tactics only) | – |
-| `aws.exfiltration.ec2-security-group-open-port-22-ingress` | detonated | 1 | T1562.007 | T1686.001 |
+| `aws.exfiltration.ec2-security-group-open-port-22-ingress` | detonated | 1 | T1562.007 | T1686.001 (formerly T1562.007) |
 | `aws.exfiltration.ec2-share-ami` | detonated | 1 | – (tactics only) | – |
 | `aws.exfiltration.ec2-share-ebs-snapshot` | detonated | 1 | T1578.001 | T1578.001 |
 | `aws.exfiltration.rds-share-snapshot` | detonated | 1 | T1496.A007 | – |
@@ -207,12 +210,16 @@ does not have permission to do so". All error codes are in
   Stratus v2.37.0 to TTC `T1496.A007` "Cloud Service Hijacking - Bedrock LLM
   Abuse", which does not describe sharing an RDS snapshot. This looks like an
   upstream mapping error.
-- **ATT&CK 20.0 has moved on:** `T1562` "Impair Defenses" is revoked in favour
-  of `T1685` "Disable or Modify Tools"; `T1562.008` → **`T1685.002`** "Disable
-  or Modify Cloud Log"; `T1562.007` → **`T1686.001`** "Cloud Firewall". The
-  tactic *defense-evasion* no longer exists; ATT&CK 20.0 has *stealth* and
-  *defense-impairment* instead. Stratus' tactics (`attack_tactics_stated`) use
-  the 2023 naming.
+- **ATT&CK changed with v19** (released 2026-04-28; attack.mitre.org,
+  "Updates - April 2026"): the tactic *Defense Evasion* was split into
+  *Stealth* and *Defense Impairment*, and `T1562` "Impair Defenses" was revoked
+  in favour of `T1685` "Disable or Modify Tools". For this project:
+  **`T1685.002` (formerly `T1562.008`)** "Disable or Modify Cloud Log" and
+  **`T1686.001` (formerly `T1562.007`)** "Disable or Modify System Firewall:
+  Cloud Firewall". The pinned v20.0 keeps that state. Stratus' tactics
+  (`attack_tactics_stated`) use the pre-v19 naming. Wherever these IDs are
+  shown, the former ID is shown with them, because most public content
+  (SigmaHQ, Stratus) still uses the pre-v19 IDs.
 - `attack_v20` fields are a mechanical normalisation: active IDs are kept,
   revoked IDs are replaced by their `revoked-by` successors, IDs that ATT&CK
   does not have map to nothing. The stated ID is always kept next to it.
@@ -226,8 +233,8 @@ does not have permission to do so". All error codes are in
 - 49 files, 27 distinct stated technique IDs. 35 labels come from the
   descriptor field `mitre_technique`, 14 from the directory name (older
   descriptors without that field).
-- `T1562.008` and `T1562.007` are revoked in ATT&CK 20.0 and normalised as
-  above; all other stated IDs are active.
+- `T1562.008` and `T1562.007` are revoked since ATT&CK v19 and normalised to
+  `T1685.002` and `T1686.001` as above; all other stated IDs are active.
 - One file has no technique label
   (`suspicious_behaviour/abnormally_high_cloud_instances_launched/...`); one has
   two (`aws_ec2_multiple_ssh_public_keys_uploaded`: T1021.004, T1021.008).
@@ -240,14 +247,16 @@ Only techniques that were detonated and have an ID in ATT&CK can be compared.
 Invictus: 26 Stratus techniques were detonated; 12 of them map to **8 distinct
 ATT&CK 20.0 IDs**. Splunk: **27 distinct IDs**.
 
-- **Exact overlap: 3** (`T1098.003`, `T1685.002`, `T1686.001`).
-- Same parent technique: `T1098`, `T1552`, `T1578`, `T1685`, `T1686`.
+- **Exact overlap: 3** (`T1098.003`, `T1685.002` (formerly `T1562.008`),
+  `T1686.001` (formerly `T1562.007`)).
+- Same parent technique: `T1098`, `T1552`, `T1578`, `T1685`, `T1686` (both
+  formerly under `T1562`).
 - Invictus only: `T1098.001`, `T1136.003`, `T1552.005`, `T1578.001`,
   `T1578.002`.
 - 14 detonated Invictus techniques have no comparable ID (11 with tactics only,
   3 with TTC-only IDs), so the overlap at technique level is a lower bound.
-- Tactics are not comparable directly: Stratus states 2023 tactic names
-  (*defense-evasion*), ATT&CK 20.0 no longer has that tactic.
+- Tactics are not comparable directly: Stratus states pre-v19 tactic names
+  (*defense-evasion*), and ATT&CK no longer has that tactic since v19.
 
 ## Proposal for M8 (not decided; Kevin decides)
 
