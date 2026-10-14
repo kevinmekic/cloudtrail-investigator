@@ -102,6 +102,7 @@ def test_event_time_is_converted_to_utc(value: str, expected: str) -> None:
         (iam_user(6, eventName="  "), "missing or empty eventName"),
         (iam_user(6, eventTime="yesterday"), "is not an ISO 8601 timestamp"),
         (iam_user(6, eventTime="2023-01-01T00:00:00"), "has no time zone"),
+        (iam_user(6, eventTime="9999-12-31T23:59:59-05:00"), "is out of range"),
         (iam_user(6, readOnly="maybe"), "readOnly is 'maybe', expected true or false"),
         (iam_user(6, awsRegion=42), "awsRegion is a number, expected a string"),
         (event(6, "not-an-object"), "userIdentity is a string, expected an object"),

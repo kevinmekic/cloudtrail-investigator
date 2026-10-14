@@ -75,7 +75,11 @@ def utc_timestamp(value: str) -> str:
         raise InvalidRecord(f"eventTime {value!r} is not an ISO 8601 timestamp") from None
     if parsed.tzinfo is None:
         raise InvalidRecord(f"eventTime {value!r} has no time zone")
-    return parsed.astimezone(UTC).replace(tzinfo=None).isoformat(sep=" ")
+    try:
+        utc = parsed.astimezone(UTC)
+    except OverflowError:
+        raise InvalidRecord(f"eventTime {value!r} is out of range") from None
+    return utc.replace(tzinfo=None).isoformat(sep=" ")
 
 
 def _type_name(value: Any) -> str:
