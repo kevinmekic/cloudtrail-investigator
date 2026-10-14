@@ -12,7 +12,9 @@ license or terms, its known caveats, and how to fetch it reproducibly.
 
 Sizes are on disk as distributed (flaws.cloud is gzip-compressed). Record counts
 were produced by `scripts/fetch_datasets.py` on 2026-10-13 and are stored in
-`data/MANIFEST.json`.
+`data/MANIFEST.json`. They count records, not unique events: flaws.cloud has
+**1,225,784 unique events**, because 713,423 records are exact duplicates (see
+the flaws.cloud caveats). Invictus has no duplicates.
 
 ## Fetching
 
@@ -84,6 +86,12 @@ described per dataset below.
   - **Unusual baseline.** The only legitimate user worked mostly as root, so root
     usage is common and not by itself suspicious here.
   - **Management events only.** S3 and Lambda data events were not logged.
+  - **One in three records is a duplicate.** 713,423 of the 1,939,207 records
+    repeat an earlier record exactly (same eventID, identical content), leaving
+    1,225,784 unique events. The repeats are concentrated in February to August
+    2019, when about half of all records are repeats, which fits two trails
+    delivering the same events (the source does not say). Count unique events,
+    as `ctinv ingest` does. Details in [`SCHEMA.md`](SCHEMA.md).
 
 ## Invictus IR Sigma-AWS
 
