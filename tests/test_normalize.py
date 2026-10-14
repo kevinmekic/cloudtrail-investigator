@@ -15,11 +15,12 @@ from cloudtrail_events import (
 from ctinv.normalize import InvalidRecord, normalize, utc_timestamp
 from ctinv.schema import EVENT_COLUMNS
 
-PROVENANCE = {"dataset", "source_file", "source_index"}
+# Added by ingest, not by normalize: provenance, and the hash DuckDB computes on load.
+NOT_FROM_NORMALIZE = {"dataset", "source_file", "source_index", "raw_sha256"}
 
 
 def test_row_has_exactly_the_event_columns() -> None:
-    assert set(normalize(iam_user(1))) == {c.name for c in EVENT_COLUMNS} - PROVENANCE
+    assert set(normalize(iam_user(1))) == {c.name for c in EVENT_COLUMNS} - NOT_FROM_NORMALIZE
 
 
 def test_iam_user() -> None:

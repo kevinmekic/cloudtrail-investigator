@@ -295,3 +295,31 @@ def test_invictus_dataset_ingests_completely(tmp_path: Path) -> None:
         2900,
         0,
     )
+
+
+def test_raw_sha256_fingerprints_the_stored_record(tmp_path: Path) -> None:
+    db = tmp_path / "x.duckdb"
+    run(db, write_ndjson(tmp_path / "a.json", [iam_user(1), root(2)]))
+    assert query(db, "SELECT count(*) FROM events WHERE raw_sha256 = sha256(raw::VARCHAR)") == [
+        (2,)
+    ]
+
+
+def test_oversized_record_is_quarantined_not_loaded(tmp_path: Path, monkeypatch) -> None:
+    import ctinv.ingest
+
+    monkeypatch.setattr(ctinv.ingest, "MAX_ROW_BYTES", 2_000)
+    big = iam_user(2, requestParameters={"blob": "x" * 5_000})
+    stats = run(
+        tmp_path / "x.duckdb", write_ndjson(tmp_path / "a.json", [iam_user(1), big, iam_user(3)])
+    )
+    assert (stats.total("inserted"), stats.total("quarantined")) == (2, 1)
+    (reason,) = query(tmp_path / "x.duckdb", "SELECT reason FROM quarantine")[0]
+    assert reason.startswith("record too large")
+
+
+def test_memory_limit_is_applied(tmp_path: Path) -> None:
+    from ctinv.schema import connect
+
+    with connect(tmp_path / "x.duckdb", memory_limit="256MB") as con:
+        assert con.execute("SELECT current_setting('memory_limit')").fetchone()[0] == "244.1 MiB"

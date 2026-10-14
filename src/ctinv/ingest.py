@@ -31,11 +31,21 @@ from ctinv.reader import MalformedRecord, RecordFormatError, iter_records
 from ctinv.schema import EVENT_COLUMNS, QUARANTINE_COLUMNS, Column, connect
 
 DEFAULT_BATCH_SIZE = 50_000
+# Measured on flaws.cloud: no slower than DuckDB's default (80% of RAM), see docs/SCHEMA.md.
+DEFAULT_MEMORY_LIMIT = "1GB"
 # Quarantined text is kept whole up to this size; real CloudTrail records are far smaller.
 MAX_QUARANTINE_TEXT = 1 << 20
+# Largest row handed to DuckDB. CloudTrail truncates event payloads above 1 MB, so a
+# bigger row is not a real event; it is quarantined instead of failing the batch.
+# DuckDB's read_json allocates buffers from this size, so it also bounds memory.
+MAX_ROW_BYTES = 16 << 20
 SUFFIXES = (".json", ".json.gz")
 # Errors that make the rest of a file unreadable (corrupt gzip, encoding, structure).
 FILE_ERRORS = (RecordFormatError, OSError, EOFError, zlib.error, UnicodeDecodeError, RecursionError)
+
+
+class RowTooLarge(ValueError):
+    """A normalized record is larger than DuckDB is asked to load."""
 
 
 class DatasetResolutionError(ValueError):
@@ -158,19 +168,37 @@ def _columns_literal(columns: Sequence[Column]) -> str:
 
 
 class _NdjsonBatch:
-    """Rows written to a temporary NDJSON file, loaded into a staging table in one go."""
+    """Rows written to a temporary NDJSON file, loaded into a staging table in one go.
 
-    def __init__(self, path: Path, table: str, columns: Sequence[Column]) -> None:
+    ``computed`` maps a column to a SQL expression evaluated by DuckDB at load
+    time instead of being written by Python.
+    """
+
+    def __init__(
+        self,
+        path: Path,
+        table: str,
+        columns: Sequence[Column],
+        computed: dict[str, str] | None = None,
+        limit_rows: bool = False,
+    ) -> None:
+        computed = computed or {}
+        self.limit_rows = limit_rows
         self.path = path
         self.table = table
-        self.columns = _columns_literal(columns)
+        self.columns = _columns_literal([c for c in columns if c.name not in computed])
+        self.select = ", ".join(computed.get(c.name, c.name) for c in columns)
         self.count = 0
         self._fh: Any = None
 
     def write(self, row: dict[str, Any]) -> None:
+        """Append a row. With limit_rows, a row above MAX_ROW_BYTES raises RowTooLarge."""
+        line = json.dumps(row)  # ASCII only, so characters == bytes
+        if self.limit_rows and len(line) > MAX_ROW_BYTES:
+            raise RowTooLarge(f"record too large ({len(line):,} bytes as a row)")
         if self._fh is None:
             self._fh = self.path.open("w", encoding="utf-8")
-        self._fh.write(json.dumps(row) + "\n")
+        self._fh.write(line + "\n")
         self.count += 1
 
     def load(self, con: duckdb.DuckDBPyConnection) -> int:
@@ -183,9 +211,9 @@ class _NdjsonBatch:
         self._fh = None
         location = str(self.path).replace("'", "''")
         con.execute(
-            f"INSERT INTO {self.table} SELECT * FROM read_json('{location}', "
+            f"INSERT INTO {self.table} SELECT {self.select} FROM read_json('{location}', "
             f"format = 'newline_delimited', columns = {self.columns}, "
-            "maximum_object_size = 268435456)"
+            f"maximum_object_size = {MAX_ROW_BYTES + 1024})"
         )
         return count
 
@@ -203,7 +231,13 @@ class Ingester:
         con.execute(
             "CREATE OR REPLACE TEMP TABLE staging_quarantine AS SELECT * FROM quarantine LIMIT 0"
         )
-        self.events = _NdjsonBatch(work_dir / "events.ndjson", "staging_events", EVENT_COLUMNS)
+        self.events = _NdjsonBatch(
+            work_dir / "events.ndjson",
+            "staging_events",
+            EVENT_COLUMNS,
+            computed={"raw_sha256": "sha256(raw::VARCHAR)"},
+            limit_rows=True,
+        )
         self.quarantine = _NdjsonBatch(
             work_dir / "quarantine.ndjson", "staging_quarantine", QUARANTINE_COLUMNS
         )
@@ -264,7 +298,11 @@ class Ingester:
             result.quarantined += 1
             return
         row.update(dataset=plan.dataset, source_file=plan.source_file, source_index=index)
-        self.events.write(row)
+        try:
+            self.events.write(row)
+        except RowTooLarge as exc:
+            self._quarantine(plan, index, row["event_id"], str(exc), json.dumps(record))
+            result.quarantined += 1
 
     def _quarantine(
         self, plan: FilePlan, index: int | None, event_id: str | None, reason: str, text: str | None
@@ -307,11 +345,12 @@ class Ingester:
                 f"INSERT INTO events SELECT {names} FROM judged WHERE NOT stored AND occurrence = 1"
             )
             # Every repeat now has its first occurrence in `events` to compare against.
+            # Comparing hashes avoids reading the stored raw records for every batch.
             con.execute(
                 """
                 CREATE OR REPLACE TEMP TABLE repeats AS
                 SELECT d.dataset, d.source_file, d.source_index, d.event_id, d.raw,
-                       d.raw::VARCHAR <> e.raw::VARCHAR AS conflicting
+                       d.raw_sha256 <> e.raw_sha256 AS conflicting
                 FROM judged d JOIN events e ON e.event_id = d.event_id
                 WHERE d.stored OR d.occurrence > 1
                 """
@@ -342,11 +381,12 @@ def ingest(
     plans: Sequence[FilePlan],
     *,
     batch_size: int = DEFAULT_BATCH_SIZE,
+    memory_limit: str | None = DEFAULT_MEMORY_LIMIT,
     on_file: Callable[[FileResult], None] | None = None,
 ) -> IngestStats:
     started = time.monotonic()
     stats = IngestStats()
-    con = connect(db_path)
+    con = connect(db_path, memory_limit)
     try:
         with tempfile.TemporaryDirectory(prefix="ctinv-ingest-") as tmp:
             ingester = Ingester(con, Path(tmp), batch_size)

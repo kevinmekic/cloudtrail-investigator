@@ -49,6 +49,11 @@ def _configure_ingest(sub: argparse.ArgumentParser) -> None:
         default=Path("data"),
         help="data directory; source_file is stored relative to it (default: ./data)",
     )
+    sub.add_argument(
+        "--memory-limit",
+        default="1GB",
+        help="DuckDB memory limit; it spills to disk beyond it (default: 1GB)",
+    )
     sub.add_argument("--batch-size", type=int, default=50_000, help=argparse.SUPPRESS)
 
 
@@ -78,7 +83,9 @@ def _run_ingest(args: argparse.Namespace) -> int:
             highlight=False,
         )
 
-    stats = ingest(args.db, plans, batch_size=args.batch_size, on_file=show)
+    stats = ingest(
+        args.db, plans, batch_size=args.batch_size, memory_limit=args.memory_limit, on_file=show
+    )
     table = Table(title=f"Ingest into {args.db}", title_justify="left")
     for column in (
         "files",

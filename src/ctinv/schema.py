@@ -54,6 +54,12 @@ EVENT_COLUMNS: tuple[Column, ...] = (
     Column("additional_event_data", "JSON", "additionalEventData"),
     Column("resources", "JSON", "resources"),
     Column("raw", "JSON", "the whole record", required=True),
+    Column(
+        "raw_sha256",
+        "VARCHAR",
+        "SHA-256 of raw as stored: duplicate check and integrity fingerprint",
+        required=True,
+    ),
     Column("dataset", "VARCHAR", "provenance: dataset name", required=True),
     Column("source_file", "VARCHAR", "provenance: file the record was read from", required=True),
     Column(
@@ -100,9 +106,15 @@ def create_table_sql(
     return f"CREATE TABLE IF NOT EXISTS {table} (\n" + ",\n".join(parts) + "\n)"
 
 
-def connect(db_path: str | Path) -> duckdb.DuckDBPyConnection:
-    """Open (or create) the database and make sure all tables exist."""
+def connect(db_path: str | Path, memory_limit: str | None = None) -> duckdb.DuckDBPyConnection:
+    """Open (or create) the database and make sure all tables exist.
+
+    ``memory_limit`` is a DuckDB size such as "1GB"; DuckDB spills to disk
+    beyond it. Without it, DuckDB may use up to 80% of the machine's memory.
+    """
     con = duckdb.connect(str(db_path))
+    if memory_limit:
+        con.execute("SET memory_limit = ?", [memory_limit])
     # Defence in depth: nothing should depend on the machine's local time zone.
     con.execute("SET TimeZone = 'UTC'")
     con.execute(create_table_sql("events", EVENT_COLUMNS, primary_key="event_id"))
