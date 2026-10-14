@@ -11,8 +11,10 @@ bounded by the largest single record instead of the file size.
 """
 
 import gzip
+import io
 import json
 import re
+import zlib
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,11 +50,36 @@ class _InvalidJSON(Exception):
         self.msg = msg
 
 
-def open_text(path: Path) -> IO[str]:
-    """Open a plain or gzip-compressed file as UTF-8 text (a leading BOM is ignored)."""
-    if path.suffix == ".gz":
-        return gzip.open(path, "rt", encoding="utf-8-sig")
-    return path.open("r", encoding="utf-8-sig")
+class _GzipSource(io.RawIOBase):
+    """Decompressed bytes of a gzip file that end, instead of failing, where it is damaged.
+
+    gzip raises only after it has returned every byte it could decompress, but a
+    text reader on top would discard the text it had already decoded in that
+    read. Here the error ends the byte stream and is kept, so the caller can read
+    every intact record first and report the damage afterwards.
+    """
+
+    def __init__(self, path: Path) -> None:
+        self._gz = gzip.GzipFile(path, "rb")
+        self.error: Exception | None = None
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, buffer: Any) -> int:
+        if self.error is not None:
+            return 0
+        try:
+            data = self._gz.read1(len(buffer))
+        except (EOFError, zlib.error, gzip.BadGzipFile) as exc:
+            self.error = exc
+            return 0
+        buffer[: len(data)] = data
+        return len(data)
+
+    def close(self) -> None:
+        self._gz.close()
+        super().close()
 
 
 def iter_records(
@@ -77,8 +104,22 @@ def iter_records(
             exceeds ``max_record_chars``.
     """
     path = Path(path)
-    with open_text(path) as fh:
-        yield from _Parser(fh, path, recover, chunk_chars, max_record_chars).records()
+    source = _GzipSource(path) if path.suffix == ".gz" else None
+    if source is not None:
+        fh: IO[str] = io.TextIOWrapper(io.BufferedReader(source, 1 << 16), encoding="utf-8-sig")
+    else:
+        fh = path.open("r", encoding="utf-8-sig")
+    with fh:
+        try:
+            yield from _Parser(fh, path, recover, chunk_chars, max_record_chars).records()
+        except RecordFormatError:
+            if source is None or source.error is None:
+                raise
+        if source is not None and source.error is not None:
+            # Reported after all intact records; it explains any truncated record before it.
+            raise RecordFormatError(
+                f"{path}: compressed data is damaged or ends early ({source.error})"
+            ) from source.error
 
 
 class _Parser:

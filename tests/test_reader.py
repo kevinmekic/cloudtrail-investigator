@@ -146,3 +146,29 @@ def test_recover_does_not_resynchronise_an_envelope(tmp_path: Path) -> None:
     text = '{"Records": [' + json.dumps(EVENTS[0]) + ", {bad}, " + json.dumps(EVENTS[1]) + "]}"
     with pytest.raises(RecordFormatError, match="invalid JSON"):
         list(iter_records(write(tmp_path / "log.json", text), recover=True))
+
+
+MANY = [make_event(n) for n in range(300)]
+
+
+@pytest.mark.parametrize("render", [envelope, ndjson], ids=["envelope", "ndjson"])
+def test_truncated_gzip_yields_intact_records_then_raises(tmp_path: Path, render) -> None:
+    data = gzip.compress(render(MANY).encode())
+    path = tmp_path / "log.json.gz"
+    path.write_bytes(data[: len(data) - 50])
+    records = []
+    with pytest.raises(RecordFormatError, match="damaged or ends early"):
+        for record in iter_records(path, recover=True):
+            records.append(record)
+    intact = [r for r in records if not isinstance(r, MalformedRecord)]
+    assert len(intact) > 250
+    assert intact == MANY[: len(intact)]
+
+
+def test_corrupted_gzip_raises_a_record_format_error(tmp_path: Path) -> None:
+    data = bytearray(gzip.compress(ndjson(MANY).encode()))
+    data[len(data) // 2 : len(data) // 2 + 64] = b"\x00" * 64
+    path = tmp_path / "log.json.gz"
+    path.write_bytes(bytes(data))
+    with pytest.raises(RecordFormatError):
+        list(iter_records(path, recover=True))
