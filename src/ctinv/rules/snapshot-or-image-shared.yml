@@ -1,0 +1,79 @@
+id: snapshot-or-image-shared
+title: Snapshot or machine image shared with another account
+severity: high
+attack:
+  technique: T1537
+  name: Transfer Data to Cloud Account
+  tactics: [exfiltration]
+description: >
+  A call that adds another AWS account, an organization or everyone (public)
+  to the accounts that may use an EBS snapshot (ModifySnapshotAttribute,
+  createVolumePermission), an AMI (ModifyImageAttribute, launchPermission),
+  or an RDS DB or cluster snapshot (ModifyDBSnapshotAttribute,
+  ModifyDBClusterSnapshotAttribute, attribute restore). Calls that only remove
+  permissions, and additions of the account's own ID, are not reported.
+  Failed attempts are reported as well (outcome "failed"). One finding per
+  call.
+rationale: >
+  Sharing a snapshot or image hands a full copy of a disk or database to the
+  receiving account, without any data leaving through the network, and the
+  receiving account can then copy it out of reach. Attackers use this to
+  exfiltrate data to an account they control; ATT&CK T1537 names creating
+  backups of cloud instances and transferring them to separate accounts. RDS
+  snapshots are included because they are shared the same way, through a
+  different API.
+false_positives:
+  - Deliberate sharing, for example backups or golden images shared with
+    other accounts of the same organization, or images published on purpose.
+    The rule cannot tell which accounts belong to the organization.
+  - flaws.cloud publishes an EBS snapshot as part of one of its challenges;
+    the account owner made it public.
+known_gaps:
+  - Denied calls often have no request parameters in CloudTrail; then the
+    target is unknown and the call is not reported.
+  - Other ways of handing data to another account are not covered, for
+    example S3 bucket policies, AWS RAM resource shares, AWS Backup vault
+    policies, ECR repository policies and KMS key grants.
+  - The later use of a share is not reported. When another account copies a
+    shared EBS snapshot or creates a volume from it, the sharing account may
+    log SharedSnapshotCopyInitiated or SharedSnapshotVolumeCreated (flaws.cloud
+    has 603 of them, from 252 other accounts using the public snapshot).
+query: |
+  WITH changes AS (
+      SELECT event_id, event_name, error_code, identity_arn, identity_type,
+             recipient_account_id,
+             coalesce(request_parameters->>'snapshotId',
+                      request_parameters->>'imageId',
+                      request_parameters->>'dBSnapshotIdentifier',
+                      request_parameters->>'dBClusterSnapshotIdentifier') AS resource,
+             CASE WHEN event_source = 'ec2.amazonaws.com' THEN
+                      list_transform(
+                          ctinv_json_items(
+                              coalesce(request_parameters->'createVolumePermission',
+                                       request_parameters->'launchPermission')->'add'->'items'),
+                          lambda i: coalesce(i->>'userId', i->>'group',
+                                             i->>'organizationArn', i->>'organizationalUnitArn'))
+                  WHEN (request_parameters->>'attributeName') = 'restore' THEN
+                      list_transform(ctinv_json_items(request_parameters->'valuesToAdd'),
+                                     lambda v: v->>'$')
+                  ELSE [] END AS added
+      FROM events
+      WHERE (event_source = 'ec2.amazonaws.com'
+             AND event_name IN ('ModifySnapshotAttribute', 'ModifyImageAttribute'))
+         OR (event_source = 'rds.amazonaws.com'
+             AND event_name IN ('ModifyDBSnapshotAttribute', 'ModifyDBClusterSnapshotAttribute'))
+  ),
+  shares AS (
+      SELECT *, list_filter(added, lambda a: a IS NOT NULL
+                                            AND a <> coalesce(recipient_account_id, '')) AS others
+      FROM changes
+  )
+  SELECT coalesce(identity_arn, identity_type) AS principal,
+         event_name || ' on ' || coalesce(resource, '(target not logged)') || ': shared with '
+           || array_to_string(list_transform(others, lambda a: CASE WHEN a = 'all'
+                                                                   THEN 'everyone (public)'
+                                                                   ELSE a END), ', ')
+           || coalesce(' (failed: ' || error_code || ')', '') AS summary,
+         [event_id] AS evidence_event_ids
+  FROM shares
+  WHERE len(others) > 0

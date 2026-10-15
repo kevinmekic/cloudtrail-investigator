@@ -512,3 +512,126 @@ def test_spike_counts_every_permission_error_code_and_ignores_record_order(
     ((_, summary, evidence, _),) = detect(tmp_path, list(reversed(records)), "access-denied-spike")
     assert evidence == ids(1, 24)
     assert summary.startswith("24 denied calls to 24 API(s)")
+
+
+# ------------------------------------------------------------------------ snapshot-or-image-shared
+
+OTHER = "444455556666"
+
+
+def ec2_share(n: int, name: str, params: dict | None, **fields) -> dict:
+    return iam_user(
+        n, eventSource="ec2.amazonaws.com", eventName=name, requestParameters=params, **fields
+    )
+
+
+def snapshot_permission(change: str, *items: dict) -> dict:
+    return {
+        "snapshotId": "snap-0123456789abcdef0",
+        "createVolumePermission": {change: {"items": list(items)}},
+        "attributeType": "CREATE_VOLUME_PERMISSION",
+    }
+
+
+def rds_share(n: int, name: str, params: dict, **fields) -> dict:
+    return iam_user(
+        n, eventSource="rds.amazonaws.com", eventName=name, requestParameters=params, **fields
+    )
+
+
+def test_shares_with_other_accounts_are_detected(tmp_path: Path) -> None:
+    records = [
+        ec2_share(1, "ModifySnapshotAttribute", snapshot_permission("add", {"userId": OTHER})),
+        ec2_share(2, "ModifySnapshotAttribute", snapshot_permission("add", {"group": "all"})),
+        ec2_share(
+            3,
+            "ModifyImageAttribute",
+            {
+                "imageId": "ami-0123456789abcdef0",
+                "launchPermission": {
+                    "add": {
+                        "items": [
+                            {"userId": OTHER},
+                            {"organizationArn": "arn:aws:organizations::444455556666:o-abc"},
+                        ]
+                    }
+                },
+                "attributeType": "launchPermission",
+            },
+        ),
+        rds_share(
+            4,
+            "ModifyDBSnapshotAttribute",
+            {"dBSnapshotIdentifier": "db-snap", "attributeName": "restore", "valuesToAdd": [OTHER]},
+        ),
+        rds_share(
+            5,
+            "ModifyDBClusterSnapshotAttribute",
+            {
+                "dBClusterSnapshotIdentifier": "cluster-snap",
+                "attributeName": "restore",
+                "valuesToAdd": ["all"],
+            },
+        ),
+        ec2_share(
+            6,
+            "ModifySnapshotAttribute",
+            snapshot_permission("add", {"userId": OTHER}),
+            errorCode="Client.UnauthorizedOperation",
+        ),
+    ]
+    found = detect(tmp_path, records, "snapshot-or-image-shared")
+    assert [(f[1], f[2], f[3]) for f in found] == [
+        (
+            f"ModifySnapshotAttribute on snap-0123456789abcdef0: shared with {OTHER}",
+            [eid(1)],
+            "succeeded",
+        ),
+        (
+            "ModifySnapshotAttribute on snap-0123456789abcdef0: shared with everyone (public)",
+            [eid(2)],
+            "succeeded",
+        ),
+        (
+            f"ModifyImageAttribute on ami-0123456789abcdef0: shared with {OTHER}, "
+            "arn:aws:organizations::444455556666:o-abc",
+            [eid(3)],
+            "succeeded",
+        ),
+        (f"ModifyDBSnapshotAttribute on db-snap: shared with {OTHER}", [eid(4)], "succeeded"),
+        (
+            "ModifyDBClusterSnapshotAttribute on cluster-snap: shared with everyone (public)",
+            [eid(5)],
+            "succeeded",
+        ),
+        (
+            f"ModifySnapshotAttribute on snap-0123456789abcdef0: shared with {OTHER} "
+            "(failed: Client.UnauthorizedOperation)",
+            [eid(6)],
+            "failed",
+        ),
+    ]
+
+
+def test_removals_own_account_and_other_attributes_are_not_shares(tmp_path: Path) -> None:
+    records = [
+        ec2_share(1, "ModifySnapshotAttribute", snapshot_permission("remove", {"userId": OTHER})),
+        ec2_share(2, "ModifySnapshotAttribute", snapshot_permission("add", {"userId": ACCOUNT})),
+        ec2_share(3, "ModifySnapshotAttribute", None, errorCode="AccessDenied"),
+        ec2_share(
+            4,
+            "ModifyImageAttribute",
+            {"imageId": "ami-0123456789abcdef0", "description": {"value": "golden image"}},
+        ),
+        rds_share(
+            5,
+            "ModifyDBSnapshotAttribute",
+            {
+                "dBSnapshotIdentifier": "db-snap",
+                "attributeName": "restore",
+                "valuesToRemove": [OTHER],
+            },
+        ),
+        ec2_share(6, "ModifyInstanceAttribute", snapshot_permission("add", {"userId": OTHER})),
+    ]
+    assert detect(tmp_path, records, "snapshot-or-image-shared") == []

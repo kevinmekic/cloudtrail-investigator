@@ -34,6 +34,13 @@
         "privilege-escalation"
       ]
     },
+    "T1537": {
+      "status": "active",
+      "name": "Transfer Data to Cloud Account",
+      "tactics": [
+        "exfiltration"
+      ]
+    },
     "T1562.008": {
       "status": "revoked",
       "name": "Disable or Modify Cloud Logs",
