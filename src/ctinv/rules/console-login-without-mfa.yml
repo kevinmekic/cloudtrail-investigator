@@ -1,0 +1,38 @@
+id: console-login-without-mfa
+title: Console sign-in without MFA
+severity: medium
+attack:
+  technique: T1078.004
+  name: "Valid Accounts: Cloud Accounts"
+  tactics: [initial-access]
+description: >
+  A successful AWS Management Console sign-in (ConsoleLogin) by an IAM user or
+  the root user without multi-factor authentication, as recorded on the sign-in
+  event itself (additionalEventData.MFAUsed = "No"). One finding per sign-in.
+rationale: >
+  Without MFA, a stolen or guessed password is all it takes to sign in. The
+  rule reads MFAUsed on the ConsoleLogin event; the session attribute
+  userIdentity.sessionContext.attributes.mfaAuthenticated is not set on IAM
+  user or root sign-in events. Tactic: Initial Access, because the event is the
+  sign-in itself.
+false_positives:
+  - Users who are allowed to sign in without MFA, for example break-glass or
+    legacy accounts.
+known_gaps:
+  - Federated sign-ins (userIdentity.type AssumedRole, for example SAML or IAM
+    Identity Center) are excluded. Their MFA happens at the identity provider
+    and is not visible in CloudTrail, so MFAUsed is always "No" for them.
+  - Failed sign-ins are not reported (no access was gained). Many failures in a
+    row are a separate, behavioural signal.
+  - Sign-in events without an MFAUsed value are not reported.
+query: |
+  SELECT coalesce(identity_arn, identity_type) AS principal,
+         'console sign-in without MFA from '
+           || coalesce(source_ip_address, '(unknown address)') AS summary,
+         [event_id] AS evidence_event_ids
+  FROM events
+  WHERE event_source = 'signin.amazonaws.com'
+    AND event_name = 'ConsoleLogin'
+    AND identity_type IN ('IAMUser', 'Root')
+    AND (additional_event_data->>'MFAUsed') = 'No'
+    AND (response_elements->>'ConsoleLogin') = 'Success'

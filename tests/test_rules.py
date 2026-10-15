@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from cloudtrail_events import ACCOUNT, iam_user, make_db, root
+from cloudtrail_events import ACCOUNT, assumed_role, iam_user, make_db, root
 from ctinv.detect import load_rules, run_rules
 from ctinv.schema import connect
 
@@ -150,3 +150,42 @@ def test_root_calls_made_by_aws_services_are_not_counted(tmp_path: Path) -> None
     on_behalf["userIdentity"]["invokedBy"] = "support.amazonaws.com"
     records = [on_behalf, root(2, eventType="AwsServiceEvent"), iam_user(3)]
     assert detect(tmp_path, records, "root-account-usage") == []
+
+
+# ------------------------------------------------------------------ console-login-without-mfa
+
+
+def sign_in(make, n: int, mfa: str | None, outcome: str = "Success", **fields) -> dict:
+    extra = {} if mfa is None else {"additionalEventData": {"MFAUsed": mfa}}
+    return make(
+        n,
+        eventSource="signin.amazonaws.com",
+        eventName="ConsoleLogin",
+        eventType="AwsConsoleSignIn",
+        responseElements={"ConsoleLogin": outcome},
+        **extra,
+        **fields,
+    )
+
+
+def test_successful_sign_in_without_mfa_is_detected(tmp_path: Path) -> None:
+    records = [sign_in(iam_user, 1, "No"), sign_in(root, 2, "No"), sign_in(iam_user, 3, "Yes")]
+    found = detect(tmp_path, records, "console-login-without-mfa")
+    assert [(f[0], f[1], f[2]) for f in found] == [
+        (
+            f"arn:aws:iam::{ACCOUNT}:user/alice",
+            "console sign-in without MFA from 203.0.113.10",
+            [eid(1)],
+        ),
+        (f"arn:aws:iam::{ACCOUNT}:root", "console sign-in without MFA from 203.0.113.10", [eid(2)]),
+    ]
+
+
+def test_sign_ins_that_do_not_count(tmp_path: Path) -> None:
+    records = [
+        sign_in(iam_user, 1, "No", outcome="Failure", errorMessage="Failed authentication"),
+        sign_in(assumed_role, 2, "No"),  # federated: MFA happens at the identity provider
+        sign_in(iam_user, 3, None),  # no MFAUsed value
+        assumed_role(4, mfa="false"),  # session attribute on an ordinary API call
+    ]
+    assert detect(tmp_path, records, "console-login-without-mfa") == []
