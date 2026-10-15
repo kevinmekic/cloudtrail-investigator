@@ -31,6 +31,5 @@ venv/
 !.env.example
 
 # --- Local tooling / working files ---
-PROJECT_PLAN.md
 .claude/
 .DS_Store

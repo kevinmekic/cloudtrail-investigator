@@ -1,7 +1,7 @@
 # Ground-truth labels
 
-Frozen on 2026-10-14 (milestone M2b), **before any detection rule existed** and
-without any detection logic, so the evaluation (M8) cannot become circular.
+Frozen on 2026-10-14, **before any detection rule existed** and without any
+detection logic, so the evaluation cannot become circular.
 
 | File | Content |
 |---|---|
@@ -10,14 +10,17 @@ without any detection logic, so the evaluation (M8) cannot become circular.
 | `sources.json` | Snapshot of the external sources the labels are derived from (Stratus technique catalog, ATT&CK lookups, Splunk label provenance) |
 | `SHA256SUMS` | Hashes of the three files above; `tests/test_labels.py` fails if any of them changes |
 
-**Frozen means:** these files must not change once rule work (M4) starts. A
-change needs a documented reason in the project log, then an updated
+**Frozen means:** these files must not change once detection rules are being
+written. A change needs a documented reason in the project log, then an updated
 `SHA256SUMS`; the test makes a silent change impossible.
 
 ## Dev/test split
 
-The label files refer to this split as "ground rule 10" of the project's
-working rules.
+Two phrases inside the frozen `splunk_labels.json` are short labels from when
+the files were written, kept because the files cannot change: `"held-out test
+(ground rule 10)"` means the held-out test split described in this section, and
+"dropped as a duplicate in M2" refers to the dataset download step
+(`scripts/fetch_datasets.py`, see `docs/DATASETS.md`).
 
 | Dataset | Split | Labels |
 |---|---|---|
@@ -25,10 +28,10 @@ working rules.
 | flaws.cloud | development | none (no ground truth exists) |
 | Splunk attack_data | **held-out test** | Splunk's own descriptors; no Splunk event content was read for this |
 
-Rules are written and tuned on development data only. While writing or tuning
-rules (M4, M5), Splunk event content must not be opened, queried or printed.
-The primary evaluation in M8 is on Splunk; Invictus results are reported
-separately as "development set, optimistic".
+Rules are written and tuned on development data only. While rules are written
+or tuned, Splunk event content must not be opened, queried or printed. The
+primary evaluation is on Splunk; Invictus results are reported separately as
+"development set, optimistic".
 
 ## Source versions
 
@@ -238,8 +241,8 @@ does not have permission to do so". All error codes are in
 - One file has no technique label
   (`suspicious_behaviour/abnormally_high_cloud_instances_launched/...`); one has
   two (`aws_ec2_multiple_ssh_public_keys_uploaded`: T1021.004, T1021.008).
-- The labels are Splunk's and are used as given; reviewing them is backlog item
-  B12.
+- The labels are Splunk's and are used as given; they have not been reviewed
+  yet.
 
 ## Coverage: Invictus vs. Splunk (ATT&CK 20.0)
 
@@ -258,11 +261,11 @@ ATT&CK 20.0 IDs**. Splunk: **27 distinct IDs**.
 - Tactics are not comparable directly: Stratus states pre-v19 tactic names
   (*defense-evasion*), and ATT&CK no longer has that tactic since v19.
 
-## Proposal for M8 (not decided; Kevin decides)
+## How findings are scored against these labels
 
 1. **Detection:** a technique counts as detected if at least one finding has an
-   evidence event with role `attack` for that technique. Optional strict
-   variant: only `"documented": true` events count.
+   evidence event with role `attack` for that technique. A strict variant, in
+   which only `"documented": true` events count, is reported as well.
 2. **Lab scaffolding** (`warm-up`, `preflight`, `revert`, `clean-up`,
    `side-effect`): findings that rest only on these events are excluded from
    both true-positive and false-positive counts and reported as a separate
@@ -272,7 +275,7 @@ ATT&CK 20.0 IDs**. Splunk: **27 distinct IDs**.
 3. **Background** (403 events): findings on them are reported separately as
    "unlabelled background", not counted as false positives. Operator activity
    is probably benign, but nothing guarantees it, and the dataset is not a
-   benign baseline. (Alternative: count them as false positives and say so.)
+   benign baseline.
 4. **Failed attempts** (`cloudtrail-stop`, `cloudtrail-delete`,
    `ec2-enumerate-from-instance`): in scope; report "detected" and "attempt
    failed" side by side, as detecting failed tampering attempts is a rule
@@ -291,6 +294,6 @@ ATT&CK 20.0 IDs**. Splunk: **27 distinct IDs**.
   the request parameters in all six cases).
 - The `attack` role includes 24 calls on the detonation path that the technique
   file does not name (role assumption); they are marked.
-- Splunk technique labels are unreviewed (B12).
+- Splunk technique labels are unreviewed.
 - Stratus documentation text in `sources.json` is quoted from the Stratus Red
   Team source code (Apache-2.0, Datadog).

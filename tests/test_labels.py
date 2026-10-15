@@ -1,4 +1,4 @@
-"""Guards for the frozen ground-truth labels (milestone M2b, see labels/README.md)."""
+"""Guards for the frozen ground-truth labels (see labels/README.md)."""
 
 import hashlib
 import json
@@ -42,8 +42,8 @@ def load(name: str) -> dict:
 def test_label_files_are_unchanged(name: str) -> None:
     digest = hashlib.sha256((LABELS / name).read_bytes()).hexdigest()
     assert digest == frozen_hashes()[name], (
-        f"labels/{name} changed. Labels are frozen: a change needs a Log entry with the "
-        "reason in PROJECT_PLAN.md, then an updated labels/SHA256SUMS."
+        f"labels/{name} changed. Labels are frozen: a change needs a documented reason, "
+        "then an updated labels/SHA256SUMS (see labels/README.md)."
     )
 
 

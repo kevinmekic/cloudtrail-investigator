@@ -97,7 +97,7 @@ under a different session time zone to prove the value does not move.
 escaping may differ from the file). The exact original bytes are found through
 `source_file`, `source_index` and the file's SHA-256 in `ingested_files`.
 
-Beyond the fields the project plan named, five columns were added: `invoked_by`
+Beyond the core fields, five more CloudTrail fields have their own column: `invoked_by`
 (an AWS service acting on someone's behalf; needed to tell service activity
 from user activity), `additional_event_data` (holds `MFAUsed` for console
 sign-ins), `event_version` (field availability depends on it, see `readOnly`
@@ -116,16 +116,21 @@ invalid text, cut at 1 MB), `quarantined_at` (UTC).
 (UTC), `records_read`, `inserted`, `duplicates`, `quarantined`, `file_error`.
 Every ingest of a file adds a row, so re-ingests are visible.
 
-## Field names: plan vs. documentation vs. data
+## Field names: expectation vs. documentation vs. data
 
-Checked against the AWS CloudTrail documentation ("CloudTrail record contents"
+The schema started from a list of fields that forensics needs most: `eventID`,
+`eventTime`, `eventSource`, `eventName`, `awsRegion`, `sourceIPAddress`,
+`userAgent`, `errorCode`, `errorMessage`, `readOnly`, `eventType`,
+`recipientAccountId`, and from `userIdentity`: `type`, `arn`, `principalId`,
+`accountId`, `accessKeyId`, `userName`, `sessionContext.sessionIssuer.arn` and
+`mfaAuthenticated`. That list was checked against the AWS CloudTrail documentation ("CloudTrail record contents"
 and "CloudTrail userIdentity element") and the ingested development data
 (flaws.cloud, Invictus). Splunk data was not looked at. Counts are unique
 events in the database: 1,225,784 for flaws.cloud, 2,900 for Invictus.
 
-All top-level names in the plan exist with exactly that spelling (note
+All top-level names in the list exist with exactly that spelling (note
 `sourceIPAddress`, `requestID`, `sharedEventID`). Where reality differs from
-the plan's list:
+the list:
 
 1. **`mfaAuthenticated` is not a `userIdentity` field.** It is
    `userIdentity.sessionContext.attributes.mfaAuthenticated`, a *string*

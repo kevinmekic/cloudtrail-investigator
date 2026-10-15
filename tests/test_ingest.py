@@ -219,7 +219,7 @@ def test_event_time_is_utc_regardless_of_session_time_zone(tmp_path: Path) -> No
 
 
 def test_nothing_is_derived_from_file_names(tmp_path: Path) -> None:
-    # The name claims another account and region; only the events count (B11).
+    # The name claims another account and region; only the events count.
     name = "999999999999_CloudTrail_eu-west-1_20200101T0000Z_abc.json"
     run(tmp_path / "x.duckdb", write_envelope(tmp_path / name, [iam_user(1)]))
     assert query(

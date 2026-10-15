@@ -8,7 +8,7 @@ from pathlib import Path
 from ctinv import __version__
 
 # Subcommand name -> one-line help text. Commands without a handler below are
-# placeholders until their milestone lands.
+# placeholders until they are implemented.
 COMMANDS: dict[str, str] = {
     "ingest": "Load CloudTrail JSON / .json.gz files into a local DuckDB database.",
     "detect": "Run detection rules and store findings with their evidence eventIDs.",

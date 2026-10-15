@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Freeze the ground-truth labels for the evaluation (milestone M2b).
+"""Freeze the ground-truth labels for the evaluation.
 
 Labels are derived before any detection rule exists and without detection logic,
 so the evaluation cannot become circular:
@@ -10,7 +10,8 @@ so the evaluation cannot become circular:
   functions, the names of the resources its Terraform prerequisites create, and
   how its CLI tags requests (``stratus-red-team_<uuid>`` user agent).
 * Splunk attack_data (held-out test set): labels come from Splunk's dataset
-  descriptors only. No Splunk event content is read (ground rule 10).
+  descriptors only. No Splunk event content is read: the test set stays
+  unseen while detection rules are written.
 
 Two modes:
     python scripts/build_labels.py --refresh-sources   # network: snapshot sources
@@ -97,6 +98,14 @@ RESOURCE_ID = re.compile(
 )
 PREFLIGHT_CALL = "ec2:DescribeAccountAttributes"
 PREFLIGHT_LOOKBACK_SECONDS = 30
+# Text of the frozen splunk_labels.json, kept verbatim so that a rebuild reproduces
+# the frozen file byte for byte. labels/README.md explains both phrases.
+SPLUNK_SPLIT_TEXT = "held-out test (ground rule 10)"
+SPLUNK_DUPLICATE_NOTE = (
+    "attack_techniques/T1562.007/aws_delete_acl/aws_cloudtrail_events.json is "
+    "byte-identical to the aws_create_acl file and was dropped as a duplicate in M2; "
+    "both scenarios state T1562.007."
+)
 
 
 # --------------------------------------------------------------------------- sources
@@ -881,7 +890,7 @@ def build(data_dir: Path) -> None:
         {
             "schema_version": 1,
             "dataset": "splunk_attack_data",
-            "split": "held-out test (ground rule 10)",
+            "split": SPLUNK_SPLIT_TEXT,
             "derived_on": DERIVED_ON,
             "derived_by": "scripts/build_labels.py (method: labels/README.md)",
             "event_content_read": False,
@@ -891,11 +900,7 @@ def build(data_dir: Path) -> None:
                 "attack": shared_sources["attack"],
                 "sources_file": "labels/sources.json",
             },
-            "notes": [
-                "attack_techniques/T1562.007/aws_delete_acl/aws_cloudtrail_events.json is "
-                "byte-identical to the aws_create_acl file and was dropped as a duplicate in M2; "
-                "both scenarios state T1562.007."
-            ],
+            "notes": [SPLUNK_DUPLICATE_NOTE],
             "by_stated_technique": dict(sorted(by_technique.items())),
             "files": files,
         },
