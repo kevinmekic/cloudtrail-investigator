@@ -116,9 +116,73 @@ def _not_implemented(args: argparse.Namespace) -> int:
     return 1
 
 
+def _configure_detect(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument(
+        "--db", type=Path, default=Path("ctinv.duckdb"), help="DuckDB file (default: ctinv.duckdb)"
+    )
+    sub.add_argument(
+        "--rule", action="append", metavar="ID", help="run only this rule (repeatable)"
+    )
+    sub.add_argument(
+        "--rules-dir", type=Path, help="directory with rule files (default: the built-in rules)"
+    )
+
+
+def _run_detect(args: argparse.Namespace) -> int:
+    from rich.console import Console
+    from rich.table import Table
+
+    from ctinv.detect import RuleError, load_rules, run_rules
+    from ctinv.schema import connect
+
+    err = Console(stderr=True)
+    if not args.db.exists():
+        err.print(f"[red]error:[/red] database {args.db} not found; run ctinv ingest first")
+        return 2
+    try:
+        rules = load_rules(args.rules_dir)
+    except RuleError as exc:
+        err.print(f"[red]error:[/red] {exc}", highlight=False)
+        return 2
+    if args.rule:
+        unknown = sorted(set(args.rule) - {r.id for r in rules})
+        if unknown:
+            err.print(f"[red]error:[/red] unknown rule(s): {', '.join(unknown)}")
+            return 2
+        rules = [r for r in rules if r.id in set(args.rule)]
+
+    con = connect(args.db)
+    try:
+        results = run_rules(con, rules)
+    except RuleError as exc:
+        err.print(f"[red]error:[/red] {exc}", highlight=False)
+        return 1
+    finally:
+        con.close()
+
+    table = Table(title=f"Detection results in {args.db}", title_justify="left")
+    for column in ("rule", "severity", "ATT&CK", "findings", "outcome", "evidence events"):
+        table.add_column(
+            column, justify="right" if column in ("findings", "evidence events") else "left"
+        )
+    for result in results:
+        outcome = ", ".join(f"{n} {name}" for name, n in result.outcomes.items()) or "-"
+        table.add_row(
+            result.rule.id,
+            result.rule.severity,
+            result.rule.technique_label,
+            f"{result.findings:,}",
+            outcome,
+            f"{result.evidence_events:,}",
+        )
+    Console().print(table)
+    return 0
+
+
 Handler = Callable[[argparse.Namespace], int]
 HANDLERS: dict[str, tuple[Callable[[argparse.ArgumentParser], None] | None, Handler]] = {
     "ingest": (_configure_ingest, _run_ingest),
+    "detect": (_configure_detect, _run_detect),
 }
 
 

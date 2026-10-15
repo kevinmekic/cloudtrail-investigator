@@ -93,6 +93,45 @@ CREATE TABLE IF NOT EXISTS ingested_files (
 )
 """
 
+# One row per finding of the latest run of each rule. The CHECK makes a finding
+# without evidence impossible at the database level, whatever code writes it.
+FINDINGS_DDL = """
+CREATE TABLE IF NOT EXISTS findings (
+    finding_id VARCHAR PRIMARY KEY,
+    rule_id VARCHAR NOT NULL,
+    rule_title VARCHAR NOT NULL,
+    severity VARCHAR NOT NULL,
+    technique_id VARCHAR NOT NULL,
+    technique_name VARCHAR NOT NULL,
+    former_technique_ids VARCHAR[] NOT NULL,
+    tactics VARCHAR[] NOT NULL,
+    principal VARCHAR,
+    summary VARCHAR NOT NULL,
+    first_seen TIMESTAMP NOT NULL,
+    last_seen TIMESTAMP NOT NULL,
+    outcome VARCHAR NOT NULL,
+    evidence_count INTEGER NOT NULL,
+    evidence_event_ids VARCHAR[] NOT NULL CHECK (len(evidence_event_ids) > 0),
+    datasets VARCHAR[] NOT NULL,
+    detected_at TIMESTAMP NOT NULL,
+    CHECK (evidence_count = len(evidence_event_ids))
+)
+"""
+
+# One row per rule execution, kept as history: which rule file (by hash) and
+# which parameters produced the current findings.
+RULE_RUNS_DDL = """
+CREATE TABLE IF NOT EXISTS rule_runs (
+    rule_id VARCHAR NOT NULL,
+    rule_sha256 VARCHAR NOT NULL,
+    parameters JSON NOT NULL,
+    detected_at TIMESTAMP NOT NULL,
+    findings INTEGER NOT NULL,
+    evidence_events INTEGER NOT NULL,
+    elapsed_seconds DOUBLE NOT NULL
+)
+"""
+
 
 def create_table_sql(
     table: str, columns: tuple[Column, ...], primary_key: str | None = None
@@ -120,4 +159,6 @@ def connect(db_path: str | Path, memory_limit: str | None = None) -> duckdb.Duck
     con.execute(create_table_sql("events", EVENT_COLUMNS, primary_key="event_id"))
     con.execute(create_table_sql("quarantine", QUARANTINE_COLUMNS))
     con.execute(INGESTED_FILES_DDL)
+    con.execute(FINDINGS_DDL)
+    con.execute(RULE_RUNS_DDL)
     return con

@@ -1,6 +1,10 @@
 """Synthetic CloudTrail records for tests. All IDs and keys are clearly fake."""
 
+import json
+from pathlib import Path
 from typing import Any
+
+from ctinv.ingest import ingest, plan_files
 
 ACCOUNT = "111122223333"
 ACCESS_KEY = "AKIAIOSFODNN7EXAMPLE"  # AWS's documented example key
@@ -77,3 +81,14 @@ def root(n: int, **fields: Any) -> dict[str, Any]:
 
 def aws_service(n: int, **fields: Any) -> dict[str, Any]:
     return event(n, {"type": "AWSService", "invokedBy": "ec2.amazonaws.com"}, **fields)
+
+
+def make_db(directory: Path, records: list[dict[str, Any]], dataset: str = "test") -> Path:
+    """Ingest records (through the real ingest path) into a new database in directory."""
+    directory.mkdir(parents=True, exist_ok=True)
+    log = directory / "events.json"
+    log.write_text("".join(json.dumps(r) + "\n" for r in records))
+    db = directory / "test.duckdb"
+    stats = ingest(db, plan_files([log], directory, dataset))
+    assert stats.total("quarantined") == 0, "fixture records must be valid"
+    return db
