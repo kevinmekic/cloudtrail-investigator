@@ -1,9 +1,11 @@
 """Positive, negative and edge-case tests for each built-in detection rule."""
 
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from cloudtrail_events import ACCOUNT, assumed_role, iam_user, make_db, root
-from ctinv.detect import load_rules, run_rules
+from cloudtrail_events import ACCOUNT, assumed_role, aws_service, event, iam_user, make_db, root
+from ctinv.detect import apply_overrides, load_rules, run_rules
 from ctinv.schema import connect
 
 
@@ -11,10 +13,10 @@ def eid(n: int) -> str:
     return f"00000000-0000-0000-0000-{n:012d}"
 
 
-def detect(tmp_path: Path, records: list[dict], rule_id: str) -> list[tuple]:
+def detect(tmp_path: Path, records: list[dict], rule_id: str, *overrides: str) -> list[tuple]:
     """Run one built-in rule on the records; return (principal, summary, evidence, outcome)."""
     db = make_db(tmp_path, records)
-    rules = [r for r in load_rules() if r.id == rule_id]
+    rules = apply_overrides([r for r in load_rules() if r.id == rule_id], overrides)
     assert rules, f"no built-in rule {rule_id}"
     with connect(db) as con:
         run_rules(con, rules)
@@ -299,3 +301,126 @@ def test_limited_policies_are_not_admin_grants(tmp_path: Path) -> None:
         iam_call(iam_user, 5, "CreatePolicy", {"policyName": "all", "policyDocument": ADMIN_DOC}),
     ]
     assert detect(tmp_path, records, "admin-policy-attached") == []
+
+
+# --------------------------------------------------------------------------------- discovery-burst
+
+
+def at(seconds: int) -> str:
+    """eventTime the given number of seconds after 2023-01-01T00:00:00Z."""
+    return (datetime(2023, 1, 1, tzinfo=UTC) + timedelta(seconds=seconds)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+
+
+def reads(make, first: int, count: int, seconds: Callable[[int], int], **fields) -> list[dict]:
+    """count read calls to different APIs, numbered from first; call i at seconds(i)."""
+    return [
+        make(first + i, eventName=f"Describe{i:02d}", eventTime=at(seconds(i)), **fields)
+        for i in range(count)
+    ]
+
+
+def ids(first: int, count: int) -> list[str]:
+    return [eid(n) for n in range(first, first + count)]
+
+
+def identity_in_fields(n: int, **fields) -> dict:
+    """A record whose userIdentity is given in fields."""
+    return event(n, None, **fields)
+
+
+def test_discovery_burst_is_one_finding_per_run(tmp_path: Path) -> None:
+    records = [
+        *reads(iam_user, 1, 20, lambda i: i * 10),  # 20 APIs in 190 s
+        *reads(iam_user, 101, 25, lambda i: 3600 + i, errorCode="AccessDenied"),
+    ]
+    found = detect(tmp_path, records, "discovery-burst")
+    assert found == [
+        (
+            f"arn:aws:iam::{ACCOUNT}:user/alice",
+            "20 read calls to 20 different APIs of 1 service(s) within 3 minutes, "
+            "0 failed, from 1 source address(es)",
+            ids(1, 20),
+            "succeeded",
+        ),
+        (
+            f"arn:aws:iam::{ACCOUNT}:user/alice",
+            "25 read calls to 25 different APIs of 1 service(s) within 24 seconds, "
+            "25 failed, from 1 source address(es)",
+            ids(101, 25),
+            "failed",
+        ),
+    ]
+
+
+def test_overlapping_windows_merge_and_include_the_whole_window(tmp_path: Path) -> None:
+    records = [
+        iam_user(1, eventName="GetCallerIdentity", eventTime=at(0)),  # inside the first window
+        *reads(iam_user, 2, 20, lambda i: 200 + i * 2),  # 20 APIs by 238 s
+        *reads(iam_user, 30, 20, lambda i: 500 + i * 2),  # again by 538 s, windows overlap
+        iam_user(60, eventName="ListUsers", eventTime=at(900)),  # after the last window
+    ]
+    ((_, summary, evidence, _),) = detect(tmp_path, records, "discovery-burst")
+    assert evidence == [eid(1), *ids(2, 20), *ids(30, 20)]
+    assert summary.startswith("41 read calls to 21 different APIs")
+
+
+def test_no_burst_below_the_thresholds(tmp_path: Path) -> None:
+    records = [
+        *reads(iam_user, 1, 19, lambda i: i),  # 19 APIs
+        *[iam_user(100 + i, eventName="ListUsers", eventTime=at(1000 + i)) for i in range(50)],
+        *reads(iam_user, 200, 20, lambda i: 5000 + i * 20),  # 20 APIs, but over 380 s
+        *[iam_user(300 + i, eventName=f"Create{i:02d}", eventTime=at(9000)) for i in range(30)],
+    ]
+    assert detect(tmp_path, records, "discovery-burst") == []
+
+
+def test_burst_counts_per_identity_and_skips_calls_made_by_aws(tmp_path: Path) -> None:
+    by_service = reads(iam_user, 1, 20, lambda i: i)
+    for record in by_service:
+        record["userIdentity"]["invokedBy"] = "config.amazonaws.com"
+    anonymous = reads(
+        identity_in_fields,
+        100,
+        20,
+        lambda i: i,
+        userIdentity={"type": "AWSAccount", "principalId": "", "accountId": "ANONYMOUS_PRINCIPAL"},
+    )
+    records = [
+        *by_service,
+        *anonymous,
+        *reads(aws_service, 200, 20, lambda i: i),
+        *reads(iam_user, 300, 10, lambda i: i),  # alice and the role: 10 APIs each
+        *reads(assumed_role, 400, 10, lambda i: i),
+    ]
+    assert detect(tmp_path, records, "discovery-burst") == []
+
+
+def test_burst_does_not_depend_on_record_order_or_access_keys(tmp_path: Path) -> None:
+    # Root calls without an access key, all within one second, in reverse order.
+    records = list(reversed(reads(root, 1, 20, lambda i: 42)))
+    ((principal, summary, evidence, _),) = detect(tmp_path, records, "discovery-burst")
+    assert principal == f"arn:aws:iam::{ACCOUNT}:root"
+    assert "within 0 seconds" in summary
+    assert evidence == ids(1, 20)
+
+
+def test_burst_of_another_account_principal(tmp_path: Path) -> None:
+    other = {"type": "AWSAccount", "principalId": "AIDAOTHERACCOUNT01", "accountId": "444455556666"}
+    records = reads(identity_in_fields, 1, 20, lambda i: i, userIdentity=other)
+    ((principal, *_),) = detect(tmp_path, records, "discovery-burst")
+    assert principal == "444455556666:AIDAOTHERACCOUNT01"
+
+
+def test_discovery_thresholds_are_parameters(tmp_path: Path) -> None:
+    records = reads(iam_user, 1, 10, lambda i: i * 60)  # 10 APIs in 9 minutes
+    assert detect(tmp_path / "a", records, "discovery-burst") == []
+    found = detect(
+        tmp_path / "b",
+        records,
+        "discovery-burst",
+        "discovery-burst.min_apis=10",
+        "discovery-burst.window_seconds=600",
+    )
+    assert [f[2] for f in found] == [ids(1, 10)]

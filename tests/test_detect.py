@@ -447,6 +447,10 @@ def test_builtin_rules_match_attack_v20() -> None:
     for tid in techniques.keys() & labelled["techniques"].keys():
         assert techniques[tid] == labelled["techniques"][tid], tid
     for builtin in load_rules():
+        assert builtin.technique_id in techniques, (
+            f"{builtin.id}: {builtin.technique_id} is not in {RULE_TECHNIQUES.name}; "
+            "run scripts/build_attack_snapshot.py"
+        )
         entry = techniques[builtin.technique_id]
         assert entry["status"] == "active", builtin.id
         assert builtin.technique_name.endswith(entry["name"]), builtin.id

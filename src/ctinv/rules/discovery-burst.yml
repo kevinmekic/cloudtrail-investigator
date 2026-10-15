@@ -1,0 +1,107 @@
+id: discovery-burst
+title: Burst of List, Describe and Get calls from one identity
+severity: low
+attack:
+  technique: T1580
+  name: Cloud Infrastructure Discovery
+  tactics: [discovery]
+description: >
+  One identity calls at least min_apis different read APIs within
+  window_seconds (defaults: 20 APIs in 300 seconds). A read API is one whose
+  name starts with List, Describe or Get; an API is the pair of eventSource
+  and eventName, so the same call in several regions counts once. Failed
+  calls count as well. Every window that reaches the threshold is part of a
+  burst, and overlapping windows are merged, so one enumeration run is one
+  finding; its evidence is every read call of that identity from the start
+  of the first window to the end of the last. Calls made by AWS services,
+  including those made for a principal (invokedBy), and anonymous calls are
+  not counted. Windows use eventTime, never the order of the records in the
+  files; calls with the same timestamp always fall into the same windows.
+rationale: >
+  Attackers who obtain credentials first find out what the account contains
+  and what the credentials can reach, usually with tools (Pacu, ScoutSuite,
+  enumerate-iam) that call many different read APIs in a short time. People
+  working by hand on the command line rarely call 20 different read APIs
+  within five minutes. Counting different APIs instead of calls keeps
+  programs that poll the same API (monitoring, autoscaling) out. ATT&CK
+  T1580 describes enumerating resources with a compromised user's access
+  keys through such APIs; Cloud Service Discovery (T1526) covers discovering
+  the services themselves, which a burst of resource reads mostly is not.
+  Reads are recognised by API name because the readOnly field is missing in
+  most events with eventVersion 1.05 or older (95.8% of the flaws.cloud
+  events).
+false_positives:
+  - Console sessions, because every console page makes several Describe and
+    List calls; the root user of flaws.cloud produces bursts this way.
+  - Security and inventory scanners running under their own role (Security
+    Monkey, Cloudsploit and an audit role in flaws.cloud).
+  - Infrastructure-as-code runs (terraform plan/apply reads every resource it
+    manages).
+known_gaps:
+  - Read calls with other prefixes are not counted, for example LookupEvents,
+    Search*, BatchGet*, Head* (S3 data events), Scan/Query (DynamoDB data
+    events), SimulatePrincipalPolicy, GenerateCredentialReport and
+    GenerateServiceLastAccessedDetails.
+  - Some prefixed calls are not discovery but read secrets or create
+    credentials, for example GetSecretValue, GetPasswordData, GetSessionToken,
+    GetFederationToken and GetObject; they count like any other read call.
+  - Slow enumeration below the threshold, or spread over several identities
+    or sessions, is not found. Each AssumedRole session is its own identity.
+  - Bursts made through the console are reported but would map better to
+    Cloud Service Dashboard (T1538).
+parameters:
+  window_seconds: 300
+  min_apis: 20
+query: |
+  WITH calls AS (
+      SELECT event_id, event_time, error_code, source_ip_address, event_source,
+             event_source || ':' || event_name AS api,
+             ctinv_actor(identity_type, identity_arn, identity_account_id,
+                         identity_principal_id, invoked_by) AS actor
+      FROM events
+      WHERE ctinv_is_list_describe_get(event_name)
+  ),
+  windows AS (
+      -- Different read APIs of the identity in the window that ends at each
+      -- call. A RANGE frame includes all calls with the same timestamp.
+      SELECT actor, event_time,
+             count(DISTINCT api) OVER (
+                 PARTITION BY actor ORDER BY event_time
+                 RANGE BETWEEN to_seconds($window_seconds) PRECEDING AND CURRENT ROW
+             ) AS apis
+      FROM calls
+      WHERE actor IS NOT NULL
+  ),
+  hot AS (
+      SELECT DISTINCT actor, event_time FROM windows WHERE apis >= $min_apis
+  ),
+  numbered AS (
+      -- Windows have equal length, so a window overlaps the previous qualifying
+      -- one exactly when it starts before that one ends.
+      SELECT actor, event_time,
+             sum(CASE WHEN previous IS NULL
+                           OR event_time - to_seconds($window_seconds) > previous
+                      THEN 1 ELSE 0 END)
+                 OVER (PARTITION BY actor ORDER BY event_time) AS burst
+      FROM (SELECT *, lag(event_time) OVER (PARTITION BY actor ORDER BY event_time) AS previous
+            FROM hot)
+  ),
+  bursts AS (
+      SELECT actor, min(event_time) - to_seconds($window_seconds) AS start_time,
+             max(event_time) AS end_time
+      FROM numbered
+      GROUP BY actor, burst
+  )
+  SELECT b.actor AS principal,
+         count(*) || ' read calls to ' || count(DISTINCT c.api) || ' different APIs of '
+           || count(DISTINCT c.event_source) || ' service(s) within '
+           || CASE WHEN epoch(max(c.event_time) - min(c.event_time)) < 120
+                   THEN epoch(max(c.event_time) - min(c.event_time))::INTEGER || ' seconds'
+                   ELSE round(epoch(max(c.event_time) - min(c.event_time)) / 60)::INTEGER
+                        || ' minutes' END
+           || ', ' || count(c.error_code) || ' failed, from '
+           || count(DISTINCT c.source_ip_address) || ' source address(es)' AS summary,
+         list(c.event_id ORDER BY c.event_time, c.event_id) AS evidence_event_ids
+  FROM bursts b
+  JOIN calls c ON c.actor = b.actor AND c.event_time BETWEEN b.start_time AND b.end_time
+  GROUP BY b.actor, b.start_time

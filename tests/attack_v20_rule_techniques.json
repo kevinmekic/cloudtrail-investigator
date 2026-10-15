@@ -41,6 +41,13 @@
         "T1685.002"
       ]
     },
+    "T1580": {
+      "status": "active",
+      "name": "Cloud Infrastructure Discovery",
+      "tactics": [
+        "discovery"
+      ]
+    },
     "T1685.002": {
       "status": "active",
       "name": "Disable or Modify Cloud Log",
