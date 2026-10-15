@@ -169,9 +169,13 @@ eventID, identical content); the database holds **1,225,784 unique events**.
 713,161 eventIDs occur exactly twice, 86 occur 3 to 8 times. 99.99% of the
 repeats are in the same file, usually within 10 records of the first copy. They
 are concentrated in February to August 2019, when almost exactly half of all
-records are repeats; outside that period there are almost none. This pattern
-fits two trails delivering the same events during that time; the source does
-not say. August 2019 alone has 710,859 unique events (58% of the dataset).
+records are repeats; outside that period there are almost none. The dataset's
+own CloudTrail events explain why: a second trail (`summitroute-logs`) was
+created on 2019-02-11 at 16:43 UTC, and the original trail (`cloudtrail`) was
+deleted on 2019-08-23 at 15:48 UTC. Repeats start on 2019-02-11 (20% of that
+day's records, 50% from the next day) and stop after 2019-08-23 (40% on that
+day, 0% from 2019-08-24): while both trails existed, each event was delivered
+twice. August 2019 alone has 710,859 unique events (58% of the dataset).
 Counts and thresholds must therefore be based on unique events, which the
 `events` table provides.
 

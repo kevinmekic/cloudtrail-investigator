@@ -88,10 +88,10 @@ described per dataset below.
   - **Management events only.** S3 and Lambda data events were not logged.
   - **One in three records is a duplicate.** 713,423 of the 1,939,207 records
     repeat an earlier record exactly (same eventID, identical content), leaving
-    1,225,784 unique events. The repeats are concentrated in February to August
-    2019, when about half of all records are repeats, which fits two trails
-    delivering the same events (the source does not say). Count unique events,
-    as `ctinv ingest` does. Details in [`SCHEMA.md`](SCHEMA.md).
+    1,225,784 unique events. The repeats fall between 2019-02-11, when a second
+    trail was created, and 2019-08-23, when the original trail was deleted
+    (both visible in the data): each event was delivered by both trails. Count
+    unique events, as `ctinv ingest` does. Details in [`SCHEMA.md`](SCHEMA.md).
 
 ## Invictus IR Sigma-AWS
 
