@@ -1,0 +1,101 @@
+id: new-region-activity
+title: Identity active in a region it never used before
+severity: medium
+attack:
+  technique: T1535
+  name: Unused/Unsupported Cloud Regions
+  tactics: [stealth]
+description: >
+  An identity that has been active for at least baseline_days (default 7)
+  makes its first call in an AWS region it never used before in the data.
+  By default only calls that are not List, Describe or Get calls count, both
+  for learning an identity's regions and for finding a new one
+  (count_read_calls: false). One finding per identity and UTC day, listing
+  every region first used that day; the evidence is the identity's counted
+  calls in each new region during the 24 hours after its first use there.
+  An identity is an IAM user, the root user, another account's principal, or
+  for assumed roles the role itself (sessionIssuer), because role sessions
+  are short-lived and have no history of their own. Calls of global
+  services, which CloudTrail logs in a fixed region whatever region the
+  caller works in, are ignored: IAM, STS, CloudFront, Route 53 (and Route 53
+  Domains), Organizations, Shield, WAF Classic, Health, Support, sign-in,
+  Budgets, Cost Explorer, Global Accelerator and Account Management. Calls
+  made by AWS services and anonymous calls are not counted.
+rationale: >
+  Most accounts use a few regions, and fewer people watch the others, so
+  attackers create resources such as cryptocurrency-mining instances in
+  regions the account does not use (ATT&CK T1535). The first activity of an
+  established identity in a new region is therefore worth a look. Reads are
+  left out by default because enumeration tools touch every region (each
+  sweep would otherwise look like new regions), and discovery-burst covers
+  them; doing something in a region is what T1535 is about. The baseline
+  keeps an identity's first days, when every region it uses is new, from
+  producing findings.
+false_positives:
+  - Planned expansion into a new region, and new workloads or disaster
+    recovery tests in another region.
+  - Regions that AWS launched during the period of the data; tools that act
+    in every enabled region start using them on their own.
+  - Identities shared by many people, such as the flaws.cloud challenge
+    users that every player uses, keep reaching new regions.
+known_gaps:
+  - Region use is only known from the data, so a region used before the first
+    log file looks new, and with little history (fewer than baseline_days)
+    nothing is reported.
+  - AWS publishes no complete list of global services; a global service not
+    in the list makes its logging region look like a new region.
+  - Read-only activity in a new region is not reported by default
+    (count_read_calls), and failed calls count like successful ones.
+  - IP addresses are not considered; this rule is about AWS regions, not
+    where the caller is.
+parameters:
+  baseline_days: 7
+  count_read_calls: false
+query: |
+  WITH calls AS (
+      -- Assumed roles are tracked as the role, not the short-lived session.
+      SELECT event_id, event_time, aws_region,
+             CASE WHEN caller IS NOT NULL THEN coalesce(session_issuer_arn, caller) END AS actor
+      FROM (SELECT *, ctinv_actor(identity_type, identity_arn, identity_account_id,
+                                  identity_principal_id, invoked_by) AS caller
+            FROM events)
+      WHERE aws_region IS NOT NULL
+        AND event_source NOT IN (
+            'iam.amazonaws.com', 'sts.amazonaws.com', 'cloudfront.amazonaws.com',
+            'route53.amazonaws.com', 'route53domains.amazonaws.com',
+            'organizations.amazonaws.com', 'shield.amazonaws.com', 'waf.amazonaws.com',
+            'health.amazonaws.com', 'support.amazonaws.com', 'signin.amazonaws.com',
+            'budgets.amazonaws.com', 'ce.amazonaws.com', 'globalaccelerator.amazonaws.com',
+            'account.amazonaws.com')
+        AND ($count_read_calls OR NOT ctinv_is_list_describe_get(event_name))
+  ),
+  counted AS (
+      SELECT * FROM calls WHERE actor IS NOT NULL
+  ),
+  first_use AS (
+      SELECT actor, aws_region, min(event_time) AS first_time
+      FROM counted
+      GROUP BY actor, aws_region
+  ),
+  since AS (
+      SELECT actor, min(first_time) AS since FROM first_use GROUP BY actor
+  ),
+  new_regions AS (
+      SELECT f.actor, f.aws_region, f.first_time, s.since,
+             (SELECT count(*) FROM first_use p
+              WHERE p.actor = f.actor AND p.first_time < f.first_time::DATE) AS known
+      FROM first_use f
+      JOIN since s USING (actor)
+      WHERE f.first_time >= s.since + to_days($baseline_days)
+  )
+  SELECT n.actor AS principal,
+         'first activity in ' || count(DISTINCT n.aws_region) || ' new region(s): '
+           || string_agg(DISTINCT n.aws_region, ', ' ORDER BY n.aws_region)
+           || ' (active since ' || strftime(any_value(n.since), '%Y-%m-%d') || ' in '
+           || any_value(n.known) || ' other region(s))' AS summary,
+         list(c.event_id ORDER BY c.event_time, c.event_id) AS evidence_event_ids
+  FROM new_regions n
+  JOIN counted c ON c.actor = n.actor AND c.aws_region = n.aws_region
+                AND c.event_time >= n.first_time
+                AND c.event_time < n.first_time + INTERVAL 1 DAY
+  GROUP BY n.actor, n.first_time::DATE

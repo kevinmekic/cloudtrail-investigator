@@ -34,6 +34,13 @@
         "privilege-escalation"
       ]
     },
+    "T1535": {
+      "status": "active",
+      "name": "Unused/Unsupported Cloud Regions",
+      "tactics": [
+        "stealth"
+      ]
+    },
     "T1537": {
       "status": "active",
       "name": "Transfer Data to Cloud Account",

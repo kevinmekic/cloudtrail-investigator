@@ -635,3 +635,100 @@ def test_removals_own_account_and_other_attributes_are_not_shares(tmp_path: Path
         ec2_share(6, "ModifyInstanceAttribute", snapshot_permission("add", {"userId": OTHER})),
     ]
     assert detect(tmp_path, records, "snapshot-or-image-shared") == []
+
+
+# ----------------------------------------------------------------------------- new-region-activity
+
+DAY = 86400
+
+
+def in_region(make, n: int, seconds: int, region: str, name: str = "RunInstances", **fields):
+    return make(
+        n,
+        eventSource="ec2.amazonaws.com",
+        eventName=name,
+        awsRegion=region,
+        eventTime=at(seconds),
+        **fields,
+    )
+
+
+def test_first_activity_in_new_regions_is_one_finding_per_day(tmp_path: Path) -> None:
+    records = [
+        in_region(iam_user, 1, 0, "us-east-1"),
+        in_region(iam_user, 2, 3 * DAY, "us-west-2"),  # new, but within the baseline
+        in_region(iam_user, 3, 10 * DAY, "ap-south-1"),
+        in_region(
+            iam_user, 4, 10 * DAY + 60, "sa-east-1", errorCode="Client.UnauthorizedOperation"
+        ),
+        in_region(iam_user, 5, 10 * DAY + 120, "ap-south-1", name="CreateKeyPair"),
+        in_region(iam_user, 6, 11 * DAY + 10, "ap-south-1"),  # more than 24 h after first use
+        in_region(iam_user, 7, 12 * DAY, "us-east-1"),  # known region
+        in_region(iam_user, 8, 20 * DAY, "eu-west-1"),
+    ]
+    found = detect(tmp_path, records, "new-region-activity")
+    assert found == [
+        (
+            f"arn:aws:iam::{ACCOUNT}:user/alice",
+            "first activity in 2 new region(s): ap-south-1, sa-east-1 "
+            "(active since 2023-01-01 in 2 other region(s))",
+            [eid(3), eid(4), eid(5)],
+            "partly failed",
+        ),
+        (
+            f"arn:aws:iam::{ACCOUNT}:user/alice",
+            "first activity in 1 new region(s): eu-west-1 "
+            "(active since 2023-01-01 in 4 other region(s))",
+            [eid(8)],
+            "succeeded",
+        ),
+    ]
+
+
+def test_global_services_reads_and_aws_calls_do_not_count(tmp_path: Path) -> None:
+    by_service = in_region(iam_user, 4, 10 * DAY, "ap-south-1")
+    by_service["userIdentity"]["invokedBy"] = "cloudformation.amazonaws.com"
+    records = [
+        in_region(iam_user, 1, 0, "eu-west-1"),
+        # IAM is global: CloudTrail logs it in us-east-1 wherever the caller works.
+        iam_user(2, eventName="CreateUser", awsRegion="us-east-1", eventTime=at(10 * DAY)),
+        in_region(iam_user, 3, 10 * DAY, "ap-south-1", name="DescribeInstances"),
+        by_service,
+        in_region(aws_service, 5, 10 * DAY, "sa-east-1"),
+    ]
+    assert detect(tmp_path, records, "new-region-activity") == []
+
+
+def test_reads_count_when_asked_and_do_not_hide_a_later_write(tmp_path: Path) -> None:
+    records = [
+        in_region(iam_user, 1, 0, "eu-west-1"),
+        in_region(iam_user, 2, 10 * DAY, "ap-south-1", name="DescribeRegions"),  # a sweep
+        in_region(iam_user, 3, 10 * DAY + 30, "ap-south-1"),  # then a write
+    ]
+    assert [f[2] for f in detect(tmp_path / "a", records, "new-region-activity")] == [[eid(3)]]
+    with_reads = detect(
+        tmp_path / "b", records, "new-region-activity", "new-region-activity.count_read_calls=true"
+    )
+    assert [f[2] for f in with_reads] == [[eid(2), eid(3)]]
+
+
+def test_role_sessions_share_the_role_history(tmp_path: Path) -> None:
+    other_session = in_region(assumed_role, 2, 10 * DAY, "ap-south-1")
+    other_session["userIdentity"]["arn"] = f"arn:aws:sts::{ACCOUNT}:assumed-role/admin/other"
+    records = [in_region(assumed_role, 1, 0, "us-east-1"), other_session]
+    ((principal, summary, evidence, _),) = detect(tmp_path, records, "new-region-activity")
+    assert principal == f"arn:aws:iam::{ACCOUNT}:role/admin"
+    assert evidence == [eid(2)]
+    assert summary.endswith("(active since 2023-01-01 in 1 other region(s))")
+
+
+def test_baseline_is_a_parameter_and_record_order_does_not_matter(tmp_path: Path) -> None:
+    records = [
+        in_region(iam_user, 2, 2 * DAY, "ap-south-1"),
+        in_region(iam_user, 1, 0, "us-east-1"),
+    ]
+    assert detect(tmp_path / "a", records, "new-region-activity") == []
+    found = detect(
+        tmp_path / "b", records, "new-region-activity", "new-region-activity.baseline_days=1"
+    )
+    assert [f[2] for f in found] == [[eid(2)]]
