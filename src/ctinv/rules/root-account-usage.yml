@@ -1,0 +1,39 @@
+id: root-account-usage
+title: Root user activity
+severity: medium
+attack:
+  technique: T1078.004
+  name: "Valid Accounts: Cloud Accounts"
+  tactics: [initial-access, privilege-escalation]
+description: >
+  API calls and console sign-ins by an account's root user. One finding per
+  account and UTC day, with all root calls of that day as evidence, so one
+  session does not turn into hundreds of findings. Calls that an AWS service
+  made on the root user's behalf (userIdentity.invokedBy, for example AWS
+  Support) and AWS service events are not counted.
+rationale: >
+  The root user has unrestricted access that IAM policies cannot limit, and AWS
+  advises using it only for the few tasks that require it, so any root activity
+  deserves a look. Tactics: Initial Access, because signing in with stolen root
+  credentials is a way into the account, and Privilege Escalation, because root
+  bypasses every IAM restriction. ATT&CK also lists Stealth and Persistence for
+  this technique; they are not reported, because a root call by itself shows
+  neither hiding nor lasting access.
+false_positives:
+  - The account owner doing tasks that require root (billing, support plans,
+    account settings, closing the account).
+  - Accounts whose owner habitually works as root; flaws.cloud is one.
+known_gaps:
+  - Calls an AWS service made for the root user (invokedBy) are excluded, even
+    though the root session started them.
+query: |
+  SELECT any_value(identity_arn) AS principal,
+         'root used on ' || strftime(event_time::DATE, '%Y-%m-%d') || ': '
+           || count(*) || ' call(s) from ' || count(DISTINCT source_ip_address)
+           || ' source address(es), ' || count(error_code) || ' failed' AS summary,
+         list(event_id ORDER BY event_time, event_id) AS evidence_event_ids
+  FROM events
+  WHERE identity_type = 'Root'
+    AND invoked_by IS NULL
+    AND coalesce(event_type, '') <> 'AwsServiceEvent'
+  GROUP BY coalesce(recipient_account_id, identity_account_id), event_time::DATE

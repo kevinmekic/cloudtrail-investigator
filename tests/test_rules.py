@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from cloudtrail_events import iam_user, make_db
+from cloudtrail_events import ACCOUNT, iam_user, make_db, root
 from ctinv.detect import load_rules, run_rules
 from ctinv.schema import connect
 
@@ -106,3 +106,47 @@ def test_tampering_target_may_be_missing_in_denied_calls(tmp_path: Path) -> None
         tmp_path, [trail_call(1, "UpdateTrail", errorCode="AccessDenied")], "cloudtrail-tampering"
     )
     assert found[0][1] == "UpdateTrail on (target not logged) (failed: AccessDenied)"
+
+
+# --------------------------------------------------------------------------- root-account-usage
+
+
+def test_root_activity_is_grouped_per_day(tmp_path: Path) -> None:
+    records = [
+        root(1, eventTime="2023-01-01T09:00:00Z"),
+        root(
+            2,
+            eventTime="2023-01-01T17:00:00Z",
+            errorCode="AccessDenied",
+            sourceIPAddress="198.51.100.7",
+        ),
+        root(
+            3,
+            eventTime="2023-01-02T09:00:00Z",
+            eventName="ConsoleLogin",
+            eventType="AwsConsoleSignIn",
+            eventSource="signin.amazonaws.com",
+        ),
+    ]
+    found = detect(tmp_path, records, "root-account-usage")
+    assert found == [
+        (
+            f"arn:aws:iam::{ACCOUNT}:root",
+            "root used on 2023-01-01: 2 call(s) from 2 source address(es), 1 failed",
+            [eid(1), eid(2)],
+            "partly failed",
+        ),
+        (
+            f"arn:aws:iam::{ACCOUNT}:root",
+            "root used on 2023-01-02: 1 call(s) from 1 source address(es), 0 failed",
+            [eid(3)],
+            "succeeded",
+        ),
+    ]
+
+
+def test_root_calls_made_by_aws_services_are_not_counted(tmp_path: Path) -> None:
+    on_behalf = root(1)
+    on_behalf["userIdentity"]["invokedBy"] = "support.amazonaws.com"
+    records = [on_behalf, root(2, eventType="AwsServiceEvent"), iam_user(3)]
+    assert detect(tmp_path, records, "root-account-usage") == []
