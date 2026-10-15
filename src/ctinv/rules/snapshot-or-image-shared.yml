@@ -20,8 +20,11 @@ rationale: >
   receiving account can then copy it out of reach. Attackers use this to
   exfiltrate data to an account they control; ATT&CK T1537 names creating
   backups of cloud instances and transferring them to separate accounts. RDS
-  snapshots are included because they are shared the same way, through a
-  different API.
+  DB and cluster snapshots are included because sharing them is the same
+  technique through a different API; Stratus Red Team simulates it as an
+  exfiltration technique of its own (aws.exfiltration.rds-share-snapshot,
+  detonated in the Invictus development data). Stratus states no ATT&CK
+  technique for it, so the T1537 mapping is this rule's own.
 false_positives:
   - Deliberate sharing, for example backups or golden images shared with
     other accounts of the same organization, or images published on purpose.

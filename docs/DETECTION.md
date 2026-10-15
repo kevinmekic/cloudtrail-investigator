@@ -181,15 +181,28 @@ invalid credentials, are not counted.
 | `new-region-activity` | `baseline_days` | 7 | An identity's first week is its baseline, so weekly jobs establish their regions before anything counts as new. |
 | `new-region-activity` | `count_read_calls` | false | Enumeration tools read in every region; counting reads would turn each sweep into new regions and would let a sweep hide a later write in the same region. |
 
-**Impossible travel is not implemented.** It needs an offline GeoIP database.
-The free options checked in October 2026 either need an account and licence
-key (MaxMind GeoLite2, IPinfo Lite, which is also country-level only) or a
-click-through licence (DB-IP Lite, CC BY 4.0, 121 MB MMDB that needs an extra
-reader library, or a 661 MB CSV). None of the available data could validate the
-rule: flaws.cloud IP addresses are anonymised, the Invictus data comes from one
-lab session, and the held-out test set may not be used for development. A
-database of today also places old IP addresses wrongly, because address blocks
-move between owners over the years.
+## Considered but not built
+
+**Impossible travel** (the same identity active from two places too far apart
+for the time between them) is out of scope:
+
+- No GeoIP database is both free of an account and usable for validation here.
+  MaxMind GeoLite2 and IPinfo Lite (country level only) need an account and a
+  licence key; DB-IP Lite (CC BY 4.0) needs no account, but nothing in the
+  data could have validated a rule built on it.
+- The flaws.cloud IP addresses are anonymised, so locations derived from them
+  are meaningless.
+- The Invictus data is a single lab session in a single region, and the
+  held-out test set may not be used while rules are written.
+
+A GeoIP database of today would also place old addresses wrongly, because
+address blocks change owners over the years.
+
+**Future work.** Impossible travel belongs with a second log source:
+identity-provider sign-in logs such as Microsoft 365 / Entra ID, where it is
+usually detected because each sign-in record carries a location that the
+provider derives from the sign-in's address. AWS console sign-ins federated
+through such a provider would then be covered at the provider.
 
 ## Writing rules
 
