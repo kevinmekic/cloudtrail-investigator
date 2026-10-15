@@ -10,7 +10,7 @@ import pytest
 
 from cloudtrail_events import iam_user, make_db, root
 from ctinv.cli import main
-from ctinv.detect import RuleError, load_rules, parse_rule, run_rules
+from ctinv.detect import RuleError, apply_overrides, load_rules, parse_rule, run_rules
 from ctinv.schema import connect
 
 LABELS = Path(__file__).resolve().parent.parent / "labels"
@@ -162,6 +162,80 @@ def test_parameters_are_passed_to_the_query(tmp_path: Path) -> None:
     assert findings(db, "summary") == [("event DeleteTrail",)]
 
 
+PARAMETRISED = rule(EVERY_EVENT + " WHERE event_name = $name").replace(
+    "rationale:",
+    "parameters: {name: DeleteTrail, limit: 5, ratio: 0.5, strict: false}\nrationale:",
+)
+
+
+def test_overrides_are_typed_like_the_defaults() -> None:
+    base = parse_rule(PARAMETRISED, "t")
+    (changed,) = apply_overrides(
+        [base],
+        [
+            "test-rule.name=StopLogging",
+            "test-rule.limit=7",
+            "test-rule.ratio=2",
+            "test-rule.strict=TRUE",
+            "test-rule.limit = 9",
+        ],
+    )
+    assert changed.parameters == {"name": "StopLogging", "limit": 9, "ratio": 2.0, "strict": True}
+    assert changed.overrides == changed.parameters
+    assert base.parameters["limit"] == 5 and base.overrides == {}
+
+
+@pytest.mark.parametrize(
+    ("assignment", "message"),
+    [
+        ("test-rule.limit", "expected RULE.PARAMETER=VALUE"),
+        ("limit=3", "expected RULE.PARAMETER=VALUE"),
+        ("other-rule.limit=3", "rule 'other-rule' is not run"),
+        ("test-rule.lmit=3", r"has no parameter 'lmit' \(parameters: limit, name, ratio, strict\)"),
+        ("test-rule.limit=3.5", "expected an integer"),
+        ("test-rule.ratio=high", "expected a number"),
+        ("test-rule.strict=yes", "expected true or false"),
+    ],
+)
+def test_invalid_overrides_are_rejected(assignment: str, message: str) -> None:
+    with pytest.raises(RuleError, match=message):
+        apply_overrides([parse_rule(PARAMETRISED, "t")], [assignment])
+
+
+def test_overrides_change_the_run_and_are_recorded(tmp_path: Path) -> None:
+    db = make_db(
+        tmp_path,
+        [iam_user(1, eventName="DeleteTrail"), iam_user(2, eventName="StopLogging")],
+    )
+    text = rule(EVERY_EVENT + " WHERE event_name = $name").replace(
+        "rationale:", "parameters: {name: DeleteTrail}\nrationale:"
+    )
+    with connect(db) as con:
+        run_rules(con, [parse_rule(text, "t")])
+        run_rules(con, apply_overrides([parse_rule(text, "t")], ["test-rule.name=StopLogging"]))
+        runs = con.execute(
+            "SELECT parameters::VARCHAR, overrides::VARCHAR FROM rule_runs ORDER BY rowid"
+        ).fetchall()
+    assert findings(db, "summary") == [("event StopLogging",)]
+    assert runs == [
+        ('{"name": "DeleteTrail"}', "{}"),
+        ('{"name": "StopLogging"}', '{"name": "StopLogging"}'),
+    ]
+
+
+def test_old_databases_get_the_overrides_column(tmp_path: Path) -> None:
+    db = tmp_path / "old.duckdb"
+    with duckdb.connect(str(db)) as con:
+        con.execute(
+            "CREATE TABLE rule_runs (rule_id VARCHAR NOT NULL, rule_sha256 VARCHAR NOT NULL, "
+            "parameters JSON NOT NULL, detected_at TIMESTAMP NOT NULL, findings INTEGER NOT NULL, "
+            "evidence_events INTEGER NOT NULL, elapsed_seconds DOUBLE NOT NULL)"
+        )
+        con.execute("INSERT INTO rule_runs VALUES ('r', 'h', '{}', now()::TIMESTAMP, 0, 0, 0)")
+    with connect(db) as con:
+        assert con.execute("SELECT overrides::VARCHAR FROM rule_runs").fetchall() == [("{}",)]
+
+
 @pytest.mark.parametrize(
     ("query", "message"),
     [
@@ -274,6 +348,22 @@ def test_detect_rejects_unknown_rule_ids(tmp_path: Path) -> None:
     assert main(["detect", "--db", str(db), "--rules-dir", str(rules), "--rule", "nope"]) == 2
     assert main(["detect", "--db", str(db), "--rules-dir", str(rules), "--rule", "test-rule"]) == 0
     assert len(findings(db)) == 1
+
+
+def test_detect_applies_and_reports_overrides(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    db = make_db(tmp_path, [iam_user(1, eventName="DeleteTrail")])
+    text = rule(EVERY_EVENT + " WHERE event_name = $name").replace(
+        "rationale:", "parameters: {name: StopLogging}\nrationale:"
+    )
+    rules = write_rules(tmp_path / "rules", text)
+    base = ["detect", "--db", str(db), "--rules-dir", str(rules)]
+    assert main([*base, "--set", "test-rule.name=DeleteTrail"]) == 0
+    assert 'test-rule: name = "DeleteTrail" (default "StopLogging")' in capsys.readouterr().out
+    assert findings(db, "summary") == [("event DeleteTrail",)]
+    assert main([*base, "--set", "test-rule.nme=DeleteTrail"]) == 2
+    assert "has no parameter 'nme'" in capsys.readouterr().err
 
 
 def test_builtin_rules_match_attack_v20() -> None:

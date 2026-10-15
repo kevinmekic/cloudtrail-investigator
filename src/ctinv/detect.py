@@ -14,10 +14,12 @@ exist: the framework rejects empty evidence and eventIDs that are not in the
 database, and the ``findings`` table enforces non-empty evidence with a CHECK.
 """
 
+import dataclasses
 import hashlib
 import json
 import re
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from importlib.resources import files
@@ -86,6 +88,9 @@ class Rule:
     query: str
     sha256: str
     source: str = field(compare=False)
+    # Parameters changed at run time (``ctinv detect --set``), already merged
+    # into ``parameters``; recorded separately in ``rule_runs``.
+    overrides: dict[str, Any] = field(default_factory=dict)
 
     @property
     def technique_label(self) -> str:
@@ -182,6 +187,58 @@ def load_rules(directory: Traversable | None = None) -> list[Rule]:
                 raise RuleError(f"{entry.name}: file name must be '{rule.id}.yml'")
             rules.append(rule)
     return rules
+
+
+def _coerce(value: str, default: Any, where: str) -> Any:
+    """Convert an override to the type of the parameter's default value."""
+    if isinstance(default, bool):
+        if value.lower() not in ("true", "false"):
+            raise RuleError(f"{where}: expected true or false, got {value!r}")
+        return value.lower() == "true"
+    for kind, name in ((int, "an integer"), (float, "a number")):
+        if isinstance(default, kind):
+            try:
+                return kind(value)
+            except ValueError:
+                raise RuleError(f"{where}: expected {name}, got {value!r}") from None
+    return value
+
+
+def apply_overrides(rules: list[Rule], assignments: Sequence[str]) -> list[Rule]:
+    """Return the rules with parameters changed by ``RULE.PARAM=VALUE`` assignments.
+
+    Only parameters a rule declares can be changed, and a value must have the
+    type of the declared default. Later assignments win.
+    """
+    by_id = {rule.id: rule for rule in rules}
+    changes: dict[str, dict[str, Any]] = {}
+    for assignment in assignments:
+        target, sep, value = assignment.partition("=")
+        rule_id, dot, name = target.strip().partition(".")
+        if not sep or not dot or not name:
+            raise RuleError(f"--set {assignment!r}: expected RULE.PARAMETER=VALUE")
+        if rule_id not in by_id:
+            raise RuleError(f"--set {assignment!r}: rule {rule_id!r} is not run")
+        declared = by_id[rule_id].parameters
+        if name not in declared:
+            known = ", ".join(sorted(declared)) or "none"
+            raise RuleError(
+                f"--set {assignment!r}: rule {rule_id} has no parameter {name!r} "
+                f"(parameters: {known})"
+            )
+        changes.setdefault(rule_id, {})[name] = _coerce(
+            value.strip(), declared[name], f"--set {assignment!r}"
+        )
+    return [
+        dataclasses.replace(
+            rule,
+            parameters={**rule.parameters, **changes[rule.id]},
+            overrides={**rule.overrides, **changes[rule.id]},
+        )
+        if rule.id in changes
+        else rule
+        for rule in rules
+    ]
 
 
 @dataclass(frozen=True)
@@ -311,11 +368,13 @@ def _run_rule(con: duckdb.DuckDBPyConnection, rule: Rule, detected_at: str) -> R
     )
     elapsed = time.monotonic() - started
     con.execute(
-        "INSERT INTO rule_runs VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO rule_runs (rule_id, rule_sha256, parameters, overrides, detected_at, "
+        "findings, evidence_events, elapsed_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [
             rule.id,
             rule.sha256,
             json.dumps(rule.parameters),
+            json.dumps(rule.overrides),
             detected_at,
             findings,
             evidence_events,

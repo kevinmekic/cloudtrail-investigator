@@ -119,7 +119,8 @@ CREATE TABLE IF NOT EXISTS findings (
 """
 
 # One row per rule execution, kept as history: which rule file (by hash) and
-# which parameters produced the current findings.
+# which parameters produced the current findings. ``parameters`` holds the values
+# used, ``overrides`` the ones changed at run time (empty: the rule's defaults).
 RULE_RUNS_DDL = """
 CREATE TABLE IF NOT EXISTS rule_runs (
     rule_id VARCHAR NOT NULL,
@@ -128,9 +129,12 @@ CREATE TABLE IF NOT EXISTS rule_runs (
     detected_at TIMESTAMP NOT NULL,
     findings INTEGER NOT NULL,
     evidence_events INTEGER NOT NULL,
-    elapsed_seconds DOUBLE NOT NULL
+    elapsed_seconds DOUBLE NOT NULL,
+    overrides JSON NOT NULL DEFAULT '{}'
 )
 """
+# Databases created before ``overrides`` existed get the column on open.
+RULE_RUNS_MIGRATION = "ALTER TABLE rule_runs ADD COLUMN IF NOT EXISTS overrides JSON DEFAULT '{}'"
 
 
 def create_table_sql(
@@ -161,4 +165,5 @@ def connect(db_path: str | Path, memory_limit: str | None = None) -> duckdb.Duck
     con.execute(INGESTED_FILES_DDL)
     con.execute(FINDINGS_DDL)
     con.execute(RULE_RUNS_DDL)
+    con.execute(RULE_RUNS_MIGRATION)
     return con

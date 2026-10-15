@@ -7,7 +7,14 @@ created by `ctinv ingest` and writes the results to the `findings` table.
 ctinv detect --db data/ctinv.duckdb                       # all built-in rules
 ctinv detect --db data/ctinv.duckdb --rule root-account-usage
 ctinv detect --db x.duckdb --rules-dir my-rules/          # rules from another directory
+ctinv detect --db data/ctinv.duckdb --set discovery-burst.min_apis=30   # change a threshold
 ```
+
+`--set RULE.PARAMETER=VALUE` (repeatable) changes a parameter a rule declares
+for one run. The value must have the type of the rule's default (integer,
+number, `true`/`false` or text); unknown rules or parameters are rejected. The
+values used and the changed ones are recorded per run in `rule_runs`
+(`parameters`, `overrides`), next to the SHA-256 of the rule file.
 
 ## Rule files
 

@@ -1,6 +1,7 @@
 """Command-line interface for ctinv."""
 
 import argparse
+import json
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -126,13 +127,21 @@ def _configure_detect(sub: argparse.ArgumentParser) -> None:
     sub.add_argument(
         "--rules-dir", type=Path, help="directory with rule files (default: the built-in rules)"
     )
+    sub.add_argument(
+        "--set",
+        action="append",
+        default=[],
+        metavar="RULE.PARAM=VALUE",
+        help="change a rule parameter for this run, e.g. discovery-burst.min_apis=30 "
+        "(repeatable; recorded in the rule_runs table)",
+    )
 
 
 def _run_detect(args: argparse.Namespace) -> int:
     from rich.console import Console
     from rich.table import Table
 
-    from ctinv.detect import RuleError, load_rules, run_rules
+    from ctinv.detect import RuleError, apply_overrides, load_rules, run_rules
     from ctinv.schema import connect
 
     err = Console(stderr=True)
@@ -150,6 +159,12 @@ def _run_detect(args: argparse.Namespace) -> int:
             err.print(f"[red]error:[/red] unknown rule(s): {', '.join(unknown)}")
             return 2
         rules = [r for r in rules if r.id in set(args.rule)]
+    rule_defaults = {r.id: r.parameters for r in rules}
+    try:
+        rules = apply_overrides(rules, args.set)
+    except RuleError as exc:
+        err.print(f"[red]error:[/red] {exc}", highlight=False)
+        return 2
 
     con = connect(args.db)
     try:
@@ -175,7 +190,15 @@ def _run_detect(args: argparse.Namespace) -> int:
             outcome,
             f"{result.evidence_events:,}",
         )
-    Console().print(table)
+    out = Console()
+    out.print(table)
+    for rule in rules:
+        for name, value in rule.overrides.items():
+            out.print(
+                f"{rule.id}: {name} = {json.dumps(value)} "
+                f"(default {json.dumps(rule_defaults[rule.id][name])})",
+                highlight=False,
+            )
     return 0
 
 
