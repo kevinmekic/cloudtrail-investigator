@@ -333,17 +333,23 @@ def _run_rule(con: duckdb.DuckDBPyConnection, rule: Rule, detected_at: str) -> R
                $rule_id, $title, $severity, $technique_id, $technique_name,
                $former::VARCHAR[], $tactics::VARCHAR[],
                f.principal, f.summary,
-               min(e.event_time), max(e.event_time),
-               CASE WHEN count(e.error_code) = 0 THEN 'succeeded'
-                    WHEN count(e.error_code) = count(*) THEN 'failed'
+               a.first_seen, a.last_seen,
+               CASE WHEN a.errors = 0 THEN 'succeeded'
+                    WHEN a.errors = a.events THEN 'failed'
                     ELSE 'partly failed' END,
-               len(f.evidence), f.evidence,
-               list_sort(list_distinct(list(e.dataset))),
+               len(f.evidence), f.evidence, a.datasets,
                $detected_at::TIMESTAMP
         FROM rule_findings f
-        JOIN rule_evidence r ON r.n = f.n
-        JOIN events e ON e.event_id = r.event_id
-        GROUP BY f.n, f.principal, f.summary, f.evidence
+        -- Aggregated per finding before joining: carrying each finding's evidence
+        -- list through the per-event join grows with the square of its size.
+        JOIN (
+            SELECT r.n, min(e.event_time) AS first_seen, max(e.event_time) AS last_seen,
+                   count(e.error_code) AS errors, count(*) AS events,
+                   list_sort(list_distinct(list(e.dataset))) AS datasets
+            FROM rule_evidence r
+            JOIN events e ON e.event_id = r.event_id
+            GROUP BY r.n
+        ) a ON a.n = f.n
         """,
         {
             "rule_id": rule.id,
