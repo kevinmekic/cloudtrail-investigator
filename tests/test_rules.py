@@ -189,3 +189,38 @@ def test_sign_ins_that_do_not_count(tmp_path: Path) -> None:
         assumed_role(4, mfa="false"),  # session attribute on an ordinary API call
     ]
     assert detect(tmp_path, records, "console-login-without-mfa") == []
+
+
+# ------------------------------------------------------------- credentials-created-for-other-user
+
+
+def iam_call(make, n: int, name: str, params: dict | None, **fields) -> dict:
+    return make(
+        n, eventSource="iam.amazonaws.com", eventName=name, requestParameters=params, **fields
+    )
+
+
+def test_credentials_for_another_user_are_detected(tmp_path: Path) -> None:
+    records = [
+        iam_call(iam_user, 1, "CreateAccessKey", {"userName": "bob"}),
+        iam_call(root, 2, "CreateLoginProfile", {"userName": "bob"}),
+        iam_call(assumed_role, 3, "CreateAccessKey", {"userName": "alice"}),
+        iam_call(iam_user, 4, "CreateAccessKey", {"userName": "carol"}, errorCode="AccessDenied"),
+    ]
+    found = detect(tmp_path, records, "credentials-created-for-other-user")
+    assert [(f[1], f[2], f[3]) for f in found] == [
+        ("CreateAccessKey for user bob", [eid(1)], "succeeded"),
+        ("CreateLoginProfile for user bob", [eid(2)], "succeeded"),
+        ("CreateAccessKey for user alice", [eid(3)], "succeeded"),
+        ("CreateAccessKey for user carol (failed: AccessDenied)", [eid(4)], "failed"),
+    ]
+
+
+def test_own_credentials_and_unknown_targets_are_not_reported(tmp_path: Path) -> None:
+    records = [
+        iam_call(iam_user, 1, "CreateAccessKey", None),  # no userName: the caller's own key
+        iam_call(iam_user, 2, "CreateAccessKey", {"userName": "Alice"}),  # same user, other case
+        iam_call(iam_user, 3, "CreateLoginProfile", None, errorCode="AccessDenied"),
+        iam_call(iam_user, 4, "UpdateLoginProfile", {"userName": "bob"}),
+    ]
+    assert detect(tmp_path, records, "credentials-created-for-other-user") == []
