@@ -1,0 +1,51 @@
+id: admin-policy-attached
+title: Administrator access granted to a user, role or group
+severity: high
+attack:
+  technique: T1098.003
+  name: "Account Manipulation: Additional Cloud Roles"
+  tactics: [persistence, privilege-escalation]
+description: >
+  The AWS managed policy AdministratorAccess is attached to an IAM user, role
+  or group (AttachUserPolicy, AttachRolePolicy, AttachGroupPolicy), or an
+  inline policy that allows every action on every resource is put on one
+  (PutUserPolicy, PutRolePolicy, PutGroupPolicy). Failed attempts are reported
+  as well. One finding per call.
+rationale: >
+  Granting full administrator rights to an identity the attacker controls is a
+  direct way to escalate privileges and to keep them. Tactics: Persistence and
+  Privilege Escalation, the two tactics ATT&CK lists for this technique.
+  Inline policies are evaluated by the helper ctinv_grants_full_admin: a
+  statement with Effect Allow, Action "*" and Resource "*".
+false_positives:
+  - Intended administrator grants, such as creating an admin role or a
+    break-glass user.
+  - Infrastructure-as-code or lab tooling that sets up roles with full access
+    (the Stratus Red Team warm-up does this in the Invictus data).
+known_gaps:
+  - Customer-managed policies attached by ARN are not resolved, even if they
+    grant full access.
+  - Grants that are effectively administrator access without Action "*"
+    (for example iam:* or NotAction constructs) are not detected.
+  - Denied calls often have no request parameters in CloudTrail and cannot be
+    evaluated.
+query: |
+  SELECT coalesce(identity_arn, identity_type) AS principal,
+         event_name || ' on '
+           || coalesce('user ' || (request_parameters->>'userName'),
+                       'role ' || (request_parameters->>'roleName'),
+                       'group ' || (request_parameters->>'groupName'),
+                       '(target not logged)')
+           || ': '
+           || coalesce(request_parameters->>'policyArn',
+                       'inline policy ' || (request_parameters->>'policyName'),
+                       'inline policy')
+           || coalesce(' (failed: ' || error_code || ')', '') AS summary,
+         [event_id] AS evidence_event_ids
+  FROM events
+  WHERE event_source = 'iam.amazonaws.com'
+    AND ((event_name IN ('AttachUserPolicy', 'AttachRolePolicy', 'AttachGroupPolicy')
+          AND regexp_full_match(coalesce(request_parameters->>'policyArn', ''),
+                                'arn:aws[a-z-]*:iam::aws:policy/AdministratorAccess'))
+      OR (event_name IN ('PutUserPolicy', 'PutRolePolicy', 'PutGroupPolicy')
+          AND ctinv_grants_full_admin(request_parameters->>'policyDocument')))

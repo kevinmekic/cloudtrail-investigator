@@ -224,3 +224,78 @@ def test_own_credentials_and_unknown_targets_are_not_reported(tmp_path: Path) ->
         iam_call(iam_user, 4, "UpdateLoginProfile", {"userName": "bob"}),
     ]
     assert detect(tmp_path, records, "credentials-created-for-other-user") == []
+
+
+# ------------------------------------------------------------------------- admin-policy-attached
+
+ADMIN_ARN = "arn:aws:iam::aws:policy/AdministratorAccess"
+ADMIN_DOC = (
+    '{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]}'
+)
+S3_DOC = ADMIN_DOC.replace('"Action": "*"', '"Action": "s3:*"')
+
+
+def test_admin_grants_are_detected(tmp_path: Path) -> None:
+    records = [
+        iam_call(iam_user, 1, "AttachUserPolicy", {"userName": "bob", "policyArn": ADMIN_ARN}),
+        iam_call(root, 2, "AttachRolePolicy", {"roleName": "ops", "policyArn": ADMIN_ARN}),
+        iam_call(
+            iam_user,
+            3,
+            "AttachGroupPolicy",
+            {
+                "groupName": "devs",
+                "policyArn": "arn:aws-us-gov:iam::aws:policy/AdministratorAccess",
+            },
+        ),
+        iam_call(
+            iam_user,
+            4,
+            "PutRolePolicy",
+            {"roleName": "ops", "policyName": "all", "policyDocument": ADMIN_DOC},
+        ),
+        iam_call(
+            iam_user,
+            5,
+            "AttachUserPolicy",
+            {"userName": "eve", "policyArn": ADMIN_ARN},
+            errorCode="AccessDenied",
+        ),
+    ]
+    found = detect(tmp_path, records, "admin-policy-attached")
+    assert [(f[1], f[3]) for f in found] == [
+        (f"AttachUserPolicy on user bob: {ADMIN_ARN}", "succeeded"),
+        (f"AttachRolePolicy on role ops: {ADMIN_ARN}", "succeeded"),
+        (
+            "AttachGroupPolicy on group devs: arn:aws-us-gov:iam::aws:policy/AdministratorAccess",
+            "succeeded",
+        ),
+        ("PutRolePolicy on role ops: inline policy all", "succeeded"),
+        (f"AttachUserPolicy on user eve: {ADMIN_ARN} (failed: AccessDenied)", "failed"),
+    ]
+
+
+def test_limited_policies_are_not_admin_grants(tmp_path: Path) -> None:
+    records = [
+        iam_call(
+            iam_user,
+            1,
+            "AttachUserPolicy",
+            {"userName": "bob", "policyArn": "arn:aws:iam::aws:policy/SecurityAudit"},
+        ),
+        iam_call(
+            iam_user,
+            2,
+            "AttachRolePolicy",
+            {"roleName": "ops", "policyArn": f"arn:aws:iam::{ACCOUNT}:policy/AdministratorAccess"},
+        ),
+        iam_call(
+            iam_user,
+            3,
+            "PutUserPolicy",
+            {"userName": "bob", "policyName": "s3", "policyDocument": S3_DOC},
+        ),
+        iam_call(iam_user, 4, "AttachUserPolicy", None, errorCode="AccessDenied"),
+        iam_call(iam_user, 5, "CreatePolicy", {"policyName": "all", "policyDocument": ADMIN_DOC}),
+    ]
+    assert detect(tmp_path, records, "admin-policy-attached") == []
