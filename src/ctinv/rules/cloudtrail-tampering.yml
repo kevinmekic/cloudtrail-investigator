@@ -1,0 +1,60 @@
+id: cloudtrail-tampering
+title: CloudTrail logging stopped, deleted or reduced
+severity: high
+attack:
+  technique: T1685.002
+  name: "Disable or Modify Tools: Disable or Modify Cloud Log"
+  formerly: [T1562.008]
+  tactics: [defense-impairment]
+description: >
+  A call that stops, deletes or reconfigures a CloudTrail trail (StopLogging,
+  DeleteTrail, UpdateTrail, PutEventSelectors), or that puts a lifecycle
+  configuration on a trail's S3 bucket so that log files are deleted
+  automatically. Failed attempts are reported as well (outcome "failed"):
+  trying to switch off logging is a signal in itself. One finding per call.
+rationale: >
+  Attackers stop or reduce logging to hide what they do next. These calls are
+  rare in normal operation, and CloudTrail records them even when they fail.
+  A bucket counts as a trail bucket if a successful CreateTrail or UpdateTrail
+  call in the data names it, or if the CloudTrail service itself accessed it.
+false_positives:
+  - Planned logging changes by administrators or infrastructure-as-code tools
+    (Terraform, CloudFormation), for example moving a trail to a new bucket.
+  - PutEventSelectors that add data events (more logging, not less); the rule
+    does not compare old and new selectors.
+  - Lifecycle rules on a trail bucket that expire old logs on purpose
+    (retention policies).
+known_gaps:
+  - A trail bucket is only known if its CreateTrail/UpdateTrail call, or
+    CloudTrail's own access to it, is in the data; lifecycle rules on other
+    trail buckets are missed.
+  - Deleting log files directly (s3:DeleteObject, s3:DeleteBucket) and changes
+    to CloudTrail Lake event data stores are not covered.
+query: |
+  WITH trail_buckets AS (
+      SELECT coalesce(request_parameters->>'s3BucketName',
+                      response_elements->>'s3BucketName') AS bucket
+      FROM events
+      WHERE event_source = 'cloudtrail.amazonaws.com'
+        AND event_name IN ('CreateTrail', 'UpdateTrail')
+        AND error_code IS NULL
+      UNION
+      SELECT request_parameters->>'bucketName'
+      FROM events
+      WHERE event_source = 's3.amazonaws.com'
+        AND 'cloudtrail.amazonaws.com' IN (invoked_by, source_ip_address)
+  )
+  SELECT coalesce(identity_arn, identity_type) AS principal,
+         event_name || ' on ' || coalesce(request_parameters->>'name',
+                                          request_parameters->>'trailName',
+                                          request_parameters->>'bucketName',
+                                          '(target not logged)')
+           || coalesce(' (failed: ' || error_code || ')', '') AS summary,
+         [event_id] AS evidence_event_ids
+  FROM events
+  WHERE (event_source = 'cloudtrail.amazonaws.com'
+         AND event_name IN ('StopLogging', 'DeleteTrail', 'UpdateTrail', 'PutEventSelectors'))
+     OR (event_source = 's3.amazonaws.com'
+         AND event_name = 'PutBucketLifecycle'
+         AND (request_parameters->>'bucketName') IN
+             (SELECT bucket FROM trail_buckets WHERE bucket IS NOT NULL))
