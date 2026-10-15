@@ -424,3 +424,91 @@ def test_discovery_thresholds_are_parameters(tmp_path: Path) -> None:
         "discovery-burst.window_seconds=600",
     )
     assert [f[2] for f in found] == [ids(1, 10)]
+
+
+# ----------------------------------------------------------------------------- access-denied-spike
+
+
+def denied(make, first: int, count: int, seconds: Callable[[int], int], **fields) -> list[dict]:
+    """count calls of make's identity, numbered from first, that fail with AccessDenied."""
+    fields.setdefault("errorCode", "AccessDenied")
+    fields.setdefault("eventName", "CreateUser")
+    return [make(first + i, eventTime=at(seconds(i)), **fields) for i in range(count)]
+
+
+def test_access_denied_spike_is_detected(tmp_path: Path) -> None:
+    records = [
+        *denied(iam_user, 1, 20, lambda i: i * 15),  # 20 in 285 s
+        *denied(
+            assumed_role,
+            101,
+            30,
+            lambda i: 7200 + i // 10,
+            eventSource="ec2.amazonaws.com",
+            eventName="RunInstances",
+            errorCode="Client.UnauthorizedOperation",
+        ),
+        iam_user(200, eventName="ListUsers", eventTime=at(100)),  # succeeded: not evidence
+    ]
+    found = detect(tmp_path, records, "access-denied-spike")
+    assert found == [
+        (
+            f"arn:aws:iam::{ACCOUNT}:user/alice",
+            "20 denied calls to 1 API(s) of 1 service(s) within 5 minutes, "
+            "from 1 source address(es)",
+            ids(1, 20),
+            "failed",
+        ),
+        (
+            f"arn:aws:sts::{ACCOUNT}:assumed-role/admin/session",
+            "30 denied calls to 1 API(s) of 1 service(s) within 2 seconds, "
+            "from 1 source address(es)",
+            ids(101, 30),
+            "failed",
+        ),
+    ]
+
+
+def test_other_errors_and_slow_denials_are_not_a_spike(tmp_path: Path) -> None:
+    records = [
+        *denied(iam_user, 1, 19, lambda i: i),  # one short of the threshold
+        *denied(iam_user, 100, 20, lambda i: 5000 + i * 20),  # 20, but over 380 s
+        *denied(iam_user, 200, 30, lambda i: 9000, errorCode="Client.RequestLimitExceeded"),
+        *denied(iam_user, 300, 30, lambda i: 9500, errorCode="NoSuchBucket"),
+    ]
+    assert detect(tmp_path, records, "access-denied-spike") == []
+
+
+def test_denied_calls_made_by_aws_or_anonymous_callers_are_not_counted(tmp_path: Path) -> None:
+    by_service = denied(iam_user, 1, 20, lambda i: i)
+    for record in by_service:
+        record["userIdentity"]["invokedBy"] = "cloudformation.amazonaws.com"
+    anonymous = denied(
+        identity_in_fields,
+        100,
+        20,
+        lambda i: i,
+        userIdentity={"type": "AWSAccount", "principalId": "", "accountId": "ANONYMOUS_PRINCIPAL"},
+    )
+    records = [*by_service, *anonymous, *denied(aws_service, 200, 20, lambda i: i)]
+    assert detect(tmp_path, records, "access-denied-spike") == []
+
+
+def test_spike_counts_every_permission_error_code_and_ignores_record_order(
+    tmp_path: Path,
+) -> None:
+    codes = [
+        "AccessDenied",
+        "AccessDeniedException",
+        "Client.UnauthorizedOperation",
+        "UnauthorizedOperation",
+        "AuthorizationError",
+        "NotAuthorized",
+    ]
+    records = [
+        iam_user(i + 1, eventName=f"Call{i}", errorCode=codes[i % 6], eventTime=at(60))
+        for i in range(24)
+    ]
+    ((_, summary, evidence, _),) = detect(tmp_path, list(reversed(records)), "access-denied-spike")
+    assert evidence == ids(1, 24)
+    assert summary.startswith("24 denied calls to 24 API(s)")

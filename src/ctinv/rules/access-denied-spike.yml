@@ -1,0 +1,102 @@
+id: access-denied-spike
+title: Many access-denied errors from one identity
+severity: medium
+attack:
+  technique: T1580
+  name: Cloud Infrastructure Discovery
+  tactics: [discovery]
+description: >
+  One identity makes at least min_denied calls that fail for lack of
+  permission within window_seconds (defaults: 20 calls in 300 seconds).
+  Permission errors are AccessDenied, AccessDeniedException,
+  UnauthorizedOperation (Client.UnauthorizedOperation in CloudTrail) and the
+  SNS codes AuthorizationError and NotAuthorized. Every window that reaches
+  the threshold is part of a spike, and overlapping windows are merged into
+  one finding whose evidence is every denied call of that identity from the
+  start of the first window to the end of the last. Calls made by AWS
+  services, including those made for a principal (invokedBy), and anonymous
+  calls are not counted. Windows use eventTime, never the order of the
+  records in the files.
+rationale: >
+  Stolen credentials rarely come with a list of what they may do, so
+  attackers try calls and watch which ones fail: by hand, or with tools that
+  try hundreds of APIs (enumerate-iam, Pacu's permission brute force). Normal
+  software calls what it was granted, so a run of permission errors is
+  unusual. ATT&CK T1580 includes enumerating resources with a compromised
+  user's access keys to learn which of them that user can reach; the denied
+  calls are the failed part of that enumeration. The count includes every
+  API, not only reads, because probing often tries writes too (RunInstances,
+  CreateAccessKey).
+false_positives:
+  - Applications or scripts that keep retrying a call they lack permission
+    for (in flaws.cloud the Security Monkey set-up user was denied
+    sts:AssumeRole 53 times within four minutes).
+  - Scanners and inventory tools running with fewer permissions than they
+    try to use.
+  - Console users opening pages they lack permission for, and deployments
+    that run before their IAM permissions are in place.
+known_gaps:
+  - Error codes whose meaning the AWS references do not state are not
+    counted, for example ForbiddenException (MediaLive) and
+    AuthorizationFailure (SimpleDB); Client.AuthFailure (EC2) is not counted
+    because it also means invalid credentials.
+  - Anonymous probing (for example of S3 buckets without credentials) is
+    not counted, because all anonymous callers share one identity.
+  - Probing slower than the threshold, or spread over several identities or
+    sessions, is not found. Each AssumedRole session is its own identity.
+parameters:
+  window_seconds: 300
+  min_denied: 20
+query: |
+  WITH denied AS (
+      SELECT event_id, event_time, source_ip_address, event_source,
+             event_source || ':' || event_name AS api,
+             ctinv_actor(identity_type, identity_arn, identity_account_id,
+                         identity_principal_id, invoked_by) AS actor
+      FROM events
+      WHERE ctinv_is_access_denied(error_code)
+  ),
+  windows AS (
+      -- Denied calls of the identity in the window that ends at each call. A
+      -- RANGE frame includes all calls with the same timestamp.
+      SELECT actor, event_time,
+             count(*) OVER (
+                 PARTITION BY actor ORDER BY event_time
+                 RANGE BETWEEN to_seconds($window_seconds) PRECEDING AND CURRENT ROW
+             ) AS calls
+      FROM denied
+      WHERE actor IS NOT NULL
+  ),
+  hot AS (
+      SELECT DISTINCT actor, event_time FROM windows WHERE calls >= $min_denied
+  ),
+  numbered AS (
+      -- Windows have equal length, so a window overlaps the previous qualifying
+      -- one exactly when it starts before that one ends.
+      SELECT actor, event_time,
+             sum(CASE WHEN previous IS NULL
+                           OR event_time - to_seconds($window_seconds) > previous
+                      THEN 1 ELSE 0 END)
+                 OVER (PARTITION BY actor ORDER BY event_time) AS spike
+      FROM (SELECT *, lag(event_time) OVER (PARTITION BY actor ORDER BY event_time) AS previous
+            FROM hot)
+  ),
+  spikes AS (
+      SELECT actor, min(event_time) - to_seconds($window_seconds) AS start_time,
+             max(event_time) AS end_time
+      FROM numbered
+      GROUP BY actor, spike
+  )
+  SELECT s.actor AS principal,
+         count(*) || ' denied calls to ' || count(DISTINCT d.api) || ' API(s) of '
+           || count(DISTINCT d.event_source) || ' service(s) within '
+           || CASE WHEN epoch(max(d.event_time) - min(d.event_time)) < 120
+                   THEN epoch(max(d.event_time) - min(d.event_time))::INTEGER || ' seconds'
+                   ELSE round(epoch(max(d.event_time) - min(d.event_time)) / 60)::INTEGER
+                        || ' minutes' END
+           || ', from ' || count(DISTINCT d.source_ip_address) || ' source address(es)'
+           AS summary,
+         list(d.event_id ORDER BY d.event_time, d.event_id) AS evidence_event_ids
+  FROM spikes s
+  JOIN denied d ON d.actor = s.actor AND d.event_time BETWEEN s.start_time AND s.end_time
+  GROUP BY s.actor, s.start_time
