@@ -51,9 +51,12 @@ ATT&CK IDs are those of Enterprise v20.0. Where v19 (April 2026) replaced an ID
 that public content such as SigmaHQ or Stratus Red Team still uses, the rule
 lists the old one under `formerly`, and output shows both, for example
 "T1685.002 (formerly T1562.008)". A test checks every rule against a snapshot
-of ATT&CK v20.0 (`labels/sources.json`): the technique must be active, its name
-must match, the tactics must be ones ATT&CK lists for it, and each former ID
-must have been revoked in favour of it.
+of the ATT&CK v20.0 entries the rules use (`tests/attack_v20_rule_techniques.json`,
+written by `scripts/build_attack_snapshot.py` from the same hash-pinned bundle
+as `labels/sources.json`): the technique must be active, its name must match,
+the tactics must be ones ATT&CK lists for it, and each former ID must have been
+revoked in favour of it. A rule with a technique that is not in the snapshot
+fails the test until the script is re-run.
 
 ## Findings and evidence
 

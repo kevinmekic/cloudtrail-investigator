@@ -1,0 +1,52 @@
+{
+  "attack": {
+    "name": "MITRE ATT&CK Enterprise",
+    "version": "20.0",
+    "repository": "https://github.com/mitre-attack/attack-stix-data",
+    "commit": "c2494b29dd268c46a5d0ea0990553e4327cd2253",
+    "path": "enterprise-attack/enterprise-attack-20.0.json",
+    "sha256": "81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352"
+  },
+  "techniques": {
+    "T1078.004": {
+      "status": "active",
+      "name": "Cloud Accounts",
+      "tactics": [
+        "initial-access",
+        "persistence",
+        "privilege-escalation",
+        "stealth"
+      ]
+    },
+    "T1098.001": {
+      "status": "active",
+      "name": "Additional Cloud Credentials",
+      "tactics": [
+        "persistence",
+        "privilege-escalation"
+      ]
+    },
+    "T1098.003": {
+      "status": "active",
+      "name": "Additional Cloud Roles",
+      "tactics": [
+        "persistence",
+        "privilege-escalation"
+      ]
+    },
+    "T1562.008": {
+      "status": "revoked",
+      "name": "Disable or Modify Cloud Logs",
+      "revoked_by": [
+        "T1685.002"
+      ]
+    },
+    "T1685.002": {
+      "status": "active",
+      "name": "Disable or Modify Cloud Log",
+      "tactics": [
+        "defense-impairment"
+      ]
+    }
+  }
+}

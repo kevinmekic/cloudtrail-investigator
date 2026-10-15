@@ -38,6 +38,46 @@ MACROS: dict[str, str] = {
             )), false)
         )
     """,
+    # Who made a call, as a key for per-identity behaviour: the identity's ARN, or
+    # for identities without one (other accounts) "<accountId>:<principalId>".
+    # NULL when AWS made the call (AWS service identities, or invokedBy: a service
+    # acting for the principal), for anonymous callers (one key would lump the
+    # whole internet together) and when the record names no principal at all.
+    "ctinv_actor": """
+        CREATE OR REPLACE TEMP MACRO ctinv_actor(
+            identity_type, arn, account_id, principal_id, invoked_by
+        ) AS (
+            CASE WHEN invoked_by IS NOT NULL
+                      OR identity_type = 'AWSService'
+                      OR account_id = 'ANONYMOUS_PRINCIPAL' THEN NULL
+                 WHEN arn IS NOT NULL THEN arn
+                 WHEN nullif(nullif(principal_id, ''), 'null') IS NOT NULL
+                     THEN coalesce(account_id, '?') || ':' || principal_id
+                 ELSE NULL END
+        )
+    """,
+    # True if the API name starts with List, Describe or Get: the classification
+    # of read (discovery) calls used by the behavioural rules. The readOnly field
+    # cannot be used instead: most older events lack it.
+    "ctinv_is_list_describe_get": """
+        CREATE OR REPLACE TEMP MACRO ctinv_is_list_describe_get(event_name) AS (
+            coalesce(starts_with(event_name, 'List')
+                     OR starts_with(event_name, 'Describe')
+                     OR starts_with(event_name, 'Get'), false)
+        )
+    """,
+    # True if the error code says the caller lacked permission. Only codes whose
+    # meaning the AWS API references state: AccessDenied (S3, IAM, STS and other
+    # query APIs), AccessDeniedException (JSON APIs), UnauthorizedOperation (EC2;
+    # CloudTrail logs it as Client.UnauthorizedOperation), AuthorizationError and
+    # NotAuthorized (SNS).
+    "ctinv_is_access_denied": """
+        CREATE OR REPLACE TEMP MACRO ctinv_is_access_denied(error_code) AS (
+            coalesce(error_code IN ('AccessDenied', 'AccessDeniedException',
+                                    'UnauthorizedOperation', 'Client.UnauthorizedOperation',
+                                    'AuthorizationError', 'NotAuthorized'), false)
+        )
+    """,
 }
 
 

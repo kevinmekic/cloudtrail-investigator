@@ -14,6 +14,9 @@ from ctinv.detect import RuleError, apply_overrides, load_rules, parse_rule, run
 from ctinv.schema import connect
 
 LABELS = Path(__file__).resolve().parent.parent / "labels"
+# ATT&CK v20.0 entries of the techniques the built-in rules use, written by
+# scripts/build_attack_snapshot.py.
+RULE_TECHNIQUES = Path(__file__).resolve().parent / "attack_v20_rule_techniques.json"
 
 RULE = """
 id: test-rule
@@ -334,6 +337,73 @@ def test_grants_full_admin(document: str | None, expected: bool) -> None:
     )
 
 
+def macro(call: str, *args: object) -> object:
+    from ctinv import macros
+
+    con = duckdb.connect()
+    macros.register(con)
+    return con.execute(f"SELECT {call}", list(args)).fetchone()[0]
+
+
+USER_ARN = "arn:aws:iam::111122223333:user/alice"
+
+
+@pytest.mark.parametrize(
+    ("identity", "expected"),
+    [
+        (("IAMUser", USER_ARN, "111122223333", "AIDAEXAMPLE", None), USER_ARN),
+        (("AWSAccount", None, "444455556666", "AIDAOTHER", None), "444455556666:AIDAOTHER"),
+        (("AWSAccount", None, None, "AIDAOTHER", None), "?:AIDAOTHER"),
+        (("IAMUser", USER_ARN, "111122223333", "AIDAEXAMPLE", "AWS Internal"), None),
+        (("AWSService", None, None, None, "ec2.amazonaws.com"), None),
+        (("AWSService", None, None, None, None), None),
+        (("AWSAccount", None, "ANONYMOUS_PRINCIPAL", "", None), None),
+        (("AWSAccount", None, "444455556666", "null", None), None),
+        (("IAMUser", None, "111122223333", "", None), None),
+        ((None, None, None, None, None), None),
+    ],
+)
+def test_actor(identity: tuple, expected: str | None) -> None:
+    sql = "ctinv_actor(?::VARCHAR, ?::VARCHAR, ?::VARCHAR, ?::VARCHAR, ?::VARCHAR)"
+    assert macro(sql, *identity) == expected
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("ListUsers", True),
+        ("DescribeInstances", True),
+        ("GetCallerIdentity", True),
+        ("ListFunctions20150331", True),
+        ("LookupEvents", False),
+        ("RunInstances", False),
+        ("AssumeRole", False),
+        (None, False),
+    ],
+)
+def test_is_list_describe_get(name: str | None, expected: bool) -> None:
+    assert macro("ctinv_is_list_describe_get(?::VARCHAR)", name) is expected
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        ("AccessDenied", True),
+        ("AccessDeniedException", True),
+        ("Client.UnauthorizedOperation", True),
+        ("UnauthorizedOperation", True),
+        ("AuthorizationError", True),
+        ("NotAuthorized", True),
+        ("Client.RequestLimitExceeded", False),
+        ("NoSuchBucket", False),
+        ("Client.AuthFailure", False),
+        (None, False),
+    ],
+)
+def test_is_access_denied(code: str | None, expected: bool) -> None:
+    assert macro("ctinv_is_access_denied(?::VARCHAR)", code) is expected
+
+
 # --------------------------------------------------------------------------- CLI and built-in rules
 
 
@@ -367,9 +437,15 @@ def test_detect_applies_and_reports_overrides(
 
 
 def test_builtin_rules_match_attack_v20() -> None:
-    attack = json.loads((LABELS / "sources.json").read_text())["attack"]
-    assert attack["version"] == "20.0"
-    techniques = attack["techniques"]
+    # The rule snapshot is taken from the same pinned bundle as the label sources;
+    # where both have an entry, the entries must agree.
+    labelled = json.loads((LABELS / "sources.json").read_text())["attack"]
+    snapshot = json.loads(RULE_TECHNIQUES.read_text())
+    assert snapshot["attack"]["version"] == "20.0"
+    assert snapshot["attack"] == {k: v for k, v in labelled.items() if k != "techniques"}
+    techniques = snapshot["techniques"]
+    for tid in techniques.keys() & labelled["techniques"].keys():
+        assert techniques[tid] == labelled["techniques"][tid], tid
     for builtin in load_rules():
         entry = techniques[builtin.technique_id]
         assert entry["status"] == "active", builtin.id
