@@ -2,6 +2,7 @@
 
 import json
 import re
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -398,6 +399,31 @@ def test_same_second_events_are_ordered_by_event_id(tmp_path: Path) -> None:
     records = [event(n, user("alice", KEY_A), eventTime=same[0]) for n in (3, 1, 2)]
     inv = run(make_db(tmp_path, records), access_key=KEY_A)
     assert timeline_ids(inv) == [eid(1), eid(2), eid(3)]
+
+
+@pytest.mark.skipif(not hasattr(time, "tzset"), reason="needs time.tzset")
+def test_times_are_utc_whatever_the_local_time_zone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TZ", "Pacific/Auckland")
+    time.tzset()
+    try:
+        alice = user("alice", KEY_A)
+        records = [
+            event(1, alice, eventTime="2023-01-01T09:59:59Z"),
+            event(2, alice, eventTime="2023-01-01T12:00:00+02:00"),  # 10:00:00 UTC
+        ]
+        db = make_db(tmp_path, records)
+        out = tmp_path / "inv.json"
+        start = "2023-01-01T11:00:00+01:00"  # 10:00:00 UTC
+        assert main(["investigate", "--db", str(db), "--access-key", KEY_A, "--from", start,
+                     "-o", str(out)]) == 0  # fmt: skip
+        data = json.loads(out.read_text())
+        assert [e["event_time"] for e in data["timeline"]] == ["2023-01-01T10:00:00Z"]
+        assert data["scope"]["start"] == "2023-01-01T10:00:00Z"
+    finally:
+        monkeypatch.undo()
+        time.tzset()
 
 
 def test_unknown_starting_point_is_an_error(db: Path) -> None:
