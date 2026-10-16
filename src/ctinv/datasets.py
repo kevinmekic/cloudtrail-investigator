@@ -1,9 +1,10 @@
 """Known properties of the public datasets (``datasets.yml``), for reports.
 
 A report about events of a dataset takes that dataset's caveats from here, for
-example that the publisher anonymised the source IP addresses. A dataset that
-is not described (data ingested under another name) is reported as such, so a
-report never implies that its addresses are real or anonymised.
+example that the publisher anonymised the source IP addresses, account IDs and
+access keys. A dataset that is not described (data ingested under another
+name) is reported as such, so a report never implies that its values are real
+or anonymised.
 """
 
 from dataclasses import dataclass

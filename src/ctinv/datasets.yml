@@ -8,7 +8,7 @@
 # url:           where the publisher describes it
 # anonymised:    fields the publisher states it replaced before publishing
 #                (source_ips, account_ids, access_keys); empty if the publisher
-#                states no such thing. Reports label anonymised source IPs.
+#                states no such thing. Reports label every anonymised field.
 # anonymisation: how, in the publisher's words as far as possible
 # caveats:       short statements a report lists under the limitations of the data
 

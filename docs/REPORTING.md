@@ -144,19 +144,23 @@ columns.
 
 What is known about each public dataset is recorded as data in
 [`src/ctinv/datasets.yml`](../src/ctinv/datasets.yml): which fields the
-publisher anonymised, how, and the caveats a report must state. A report reads
-it for every dataset its events come from. If any of them had its source IPs
-anonymised (flaws.cloud), the IOC section is labelled:
+publisher anonymised (`source_ips`, `account_ids`, `access_keys`), how, and the
+caveats a report must state. A report reads it for every dataset its events
+come from. If any field was anonymised, the IOC section is labelled with a
+warning that names those fields. flaws.cloud's publisher replaced all three
+with random values of the same format, so a report on it says:
 
-> Source IPs anonymised by the dataset publisher - not real attacker infrastructure. Do not block, look up or report them.
+> Source IPs, account IDs and access keys were anonymised by the dataset publisher - not real infrastructure, accounts or credentials. Do not block, look up or report them.
 
-and every IP row says whether it is anonymised (for an anonymised address the
-report does not say whether it is public: the value was chosen at random). flaws.cloud's publisher
-replaced IP addresses, account IDs and access keys with random values of the
-same format, so the addresses in such a report may belong to unrelated people.
-A dataset that is not in the registry (logs ingested under another name) is
-named in the limitations as not described, so a report never implies that its
-addresses are real or anonymised.
+With fewer fields the label names only those (for example "Source IPs were
+anonymised by the dataset publisher - not real infrastructure."). The
+executive summary says the same, the headings of the IP, access key and ARN
+tables say what in them is anonymised, and every IP and access key row says
+whether its value is. For an anonymised address the report does not say
+whether it is public: the value was chosen at random and may belong to
+unrelated people. A dataset that is not in the registry (logs ingested under
+another name) is named in the limitations as not described, so a report never
+implies that its values are real or anonymised.
 
 ## Redaction
 
@@ -187,16 +191,16 @@ ctinv report --db data/ctinv.duckdb --access-key AKIA3Z2XBVUDFQ9TU4MD \
     --from 2019-08-21 --to 2019-08-23
 ```
 
-The investigation of [INVESTIGATION.md](INVESTIGATION.md) as a report:
-263,595 events in 2 sessions, 41 key moments (the key's creation by root in
-2017, the first use of both keys, the first success, the session key from
+The investigation of [INVESTIGATION.md](INVESTIGATION.md) as a report: 263,595
+events in 2 sessions, 41 key moments (the key's creation by root in 2017, the
+first use of both keys, the first success, the session key from
 `GetSessionToken`, two denied `CreateAccessKey` calls, the first denied and
-failed bursts, 32 findings), 498 activity periods,
-39 resources, 10 source IP addresses (labelled as anonymised) and 951 cited
-events in the evidence index. Measured: 10.2 s and 0.93 GB peak memory
-including the investigation (an earlier run of the same report: 13.7 s);
-Markdown 0.47 MB, HTML 0.75 MB, JSON 70.6 MB (the JSON timeline lists the
-first 100,000 events).
+failed bursts, 32 findings), 498 activity periods, 39 resources, 10 source IP
+addresses and 2 access keys (labelled as anonymised, as are the account IDs)
+and 951 cited events in the evidence index. Measured: 10.2 s and 0.93 GB peak
+memory including the investigation (an earlier run of the same report: 13.7 s);
+Markdown 0.47 MB, HTML 0.75 MB, JSON 70.6 MB (the JSON timeline lists the first
+100,000 events).
 
 A findings report over all 1,030 findings of both development datasets
 (`--findings`) took 4.3 s and 0.46 GB.

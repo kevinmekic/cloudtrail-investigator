@@ -50,10 +50,35 @@ PERIOD_GAP_SECONDS = 900
 BURST_EVENTS = 10
 BURST_SECONDS = 60
 
-IP_WARNING = (
-    "Source IPs anonymised by the dataset publisher - not real attacker infrastructure. "
-    "Do not block, look up or report them."
-)
+# Fields a dataset publisher can anonymise (datasets.yml): how a report names
+# them, and what readers must not take them for.
+ANONYMISED_FIELDS = {
+    "source_ips": ("Source IPs", "infrastructure"),
+    "account_ids": ("account IDs", "accounts"),
+    "access_keys": ("access keys", "credentials"),
+}
+
+
+def _listed(items: list[str], last: str) -> str:
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + f" {last} " + items[-1]
+
+
+def _anonymised(fields: list[str]) -> tuple[str, str]:
+    """('Source IPs, account IDs and access keys', 'infrastructure, accounts or credentials')."""
+    present = [f for f in ANONYMISED_FIELDS if f in fields]
+    names = _listed([ANONYMISED_FIELDS[f][0] for f in present], "and")
+    return names[0].upper() + names[1:], _listed([ANONYMISED_FIELDS[f][1] for f in present], "or")
+
+
+def anonymisation_warning(fields: list[str]) -> str:
+    """The label of a report's indicators when the dataset publisher anonymised ``fields``."""
+    names, real = _anonymised(fields)
+    return (
+        f"{names} were anonymised by the dataset publisher - not real {real}. "
+        "Do not block, look up or report them."
+    )
+
+
 REPORT_FORMAT = "ctinv-report/1"
 FINDINGS_FORMAT = "ctinv-findings/1"
 
@@ -130,9 +155,14 @@ def _datasets(con: duckdb.DuckDBPyConnection) -> tuple[list[dict], dict | None]:
         r[0] for r in con.execute(f"SELECT DISTINCT e.dataset FROM {_REP} ORDER BY 1").fetchall()
     ]
     datasets = describe(names)
-    anonymised = [d["name"] for d in datasets if "source_ips" in d["anonymised"]]
-    warning = {"text": IP_WARNING, "datasets": anonymised} if anonymised else None
-    return datasets, warning
+    fields = [f for f in ANONYMISED_FIELDS if any(f in d["anonymised"] for d in datasets)]
+    if not fields:
+        return datasets, None
+    return datasets, {
+        "text": anonymisation_warning(fields),
+        "fields": fields,
+        "datasets": [d["name"] for d in datasets if d["anonymised"]],
+    }
 
 
 def _iocs(
@@ -142,7 +172,10 @@ def _iocs(
     pivots: list[Any],
     limit: int,
 ) -> dict[str, Any]:
-    anonymised = {d["name"] for d in datasets if "source_ips" in d["anonymised"]}
+    # Per field, the datasets whose publisher anonymised it.
+    anonymised = {
+        f: {d["name"] for d in datasets if f in d["anonymised"]} for f in ANONYMISED_FIELDS
+    }
 
     def values(expression: str) -> list[dict]:
         rows = _table(
@@ -171,12 +204,13 @@ def _iocs(
             services.append(row)
             continue
         row["scope"] = "public" if address.is_global else "not public"
-        row["anonymised"] = set(row["datasets"]) <= anonymised
+        row["anonymised"] = set(row["datasets"]) <= anonymised["source_ips"]
         ips.append(row)
     agents = values("e.user_agent")
     keys = values("e.access_key_id")
     for row in keys:
         row["kind"] = key_kind(row["value"])
+        row["anonymised"] = set(row["datasets"]) <= anonymised["access_keys"]
     arns = [row | {"seen_as": "caller"} for row in values("e.identity_arn")]
     arns += [row | {"seen_as": "role of the caller"} for row in values("e.session_issuer_arn")]
     requested: dict[str, list] = defaultdict(list)
@@ -388,7 +422,7 @@ def investigation_report(
             con, inv, labels, datasets, warning, blast, findings, finding_rows
         ),
         "datasets": datasets,
-        "ip_warning": warning,
+        "anonymised": warning,
         "moments": _cut(moments, limits.moments)
         | {"burst_events": BURST_EVENTS, "burst_seconds": BURST_SECONDS},
         "periods": _cut(periods, limits.periods) | {"gap_seconds": period_gap},
@@ -981,14 +1015,16 @@ def _investigation_summary(
         )
     statements.append(_findings_statement(findings, finding_rows))
     if warning:
-        statements.append(
-            _stmt(
-                f"The source IP addresses in this data were anonymised by the dataset "
-                f"publisher ({', '.join(warning['datasets'])}): they are not real attacker "
-                "infrastructure."
-            )
-        )
+        statements.append(_anonymised_statement(warning))
     return statements
+
+
+def _anonymised_statement(warning: dict) -> dict[str, Any]:
+    names, real = _anonymised(warning["fields"])
+    return _stmt(
+        f"{names} in this data were anonymised by the dataset publisher "
+        f"({', '.join(warning['datasets'])}): they are not real {real}."
+    )
 
 
 def _session_first(con: duckdb.DuckDBPyConnection, session: str) -> str:
@@ -1092,7 +1128,7 @@ def findings_report(
         "scope": {"rules": rule_text, "time_range": _time_range(start, end)},
         "summary": _findings_summary(stored, findings, datasets, warning, rule_text),
         "datasets": datasets,
-        "ip_warning": warning,
+        "anonymised": warning,
         "moments": _cut(moments, limits.moments),
         "periods": None,
         "findings": findings,
@@ -1187,13 +1223,7 @@ def _findings_summary(
         )
     )
     if warning:
-        statements.append(
-            _stmt(
-                f"The source IP addresses in this data were anonymised by the dataset "
-                f"publisher ({', '.join(warning['datasets'])}): they are not real attacker "
-                "infrastructure."
-            )
-        )
+        statements.append(_anonymised_statement(warning))
     return statements
 
 

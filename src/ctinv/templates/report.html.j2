@@ -1,6 +1,7 @@
 {#- HTML report. Autoescaping is on: every {{ value }} is HTML-escaped. -#}
 {% macro ev(ids) %}{% for id in ids %}<a class="ev" href="#ev-{{ r.evidence_index[id] }}">{{ id }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endmacro %}
 {% macro cut(part, what) %}{% if part.total > part.rows | length %}<p class="note">Showing the first {{ part.rows | length | num }} of {{ part.total | num }} {{ what }}; the JSON file lists all.</p>{% endif %}{% endmacro %}
+{% set anon = r.anonymised.fields if r.anonymised else [] %}
 {% macro outcome(name) %}<span class="o-{{ name }}">{{ name }}</span>{% endmacro %}
 <!doctype html>
 <html lang="en">
@@ -146,7 +147,7 @@ details > summary { cursor: pointer; font-weight: 600; }
 Key {{ "created" if o.api == "iam:CreateAccessKey" else "issued" }} by {{ o.api }}, called by {{ o.caller }} at {{ o.event_time | time }}<br>
 {% endfor %}
 Identities: {{ n.identities | top }}<br>
-Source IPs: {{ n.source_ips | top }}{% if r.ip_warning %} (anonymised by the dataset publisher, see the indicators){% endif %}<br>
+Source IPs: {{ n.source_ips | top }}{% if "source_ips" in anon %} (anonymised by the dataset publisher, see the indicators){% endif %}<br>
 User agents: {{ n.user_agents | top }}<br>
 Regions: {{ n.regions | top }}<br>
 Evidence: {{ ev(n.evidence) }}</div></li>
@@ -196,12 +197,12 @@ Evidence: {{ ev(n.evidence) }}</div></li>
 {% endif %}
 
 <h2 id="iocs">Indicators (IOCs)</h2>
-{% if r.ip_warning %}
-<div class="warning" role="alert">{{ r.ip_warning.text }}<br><span class="note">Dataset: {{ r.ip_warning.datasets | join(", ") }}. See the limitations of the data.</span></div>
+{% if r.anonymised %}
+<div class="warning" role="alert">{{ r.anonymised.text }}<br><span class="note">Dataset: {{ r.anonymised.datasets | join(", ") }}. See the limitations of the data.</span></div>
 {% endif %}
 <p>Values as logged, by number of events. Evidence: the first and the last event with the value.</p>
 
-<h3>Source IP addresses{% if r.ip_warning %} (anonymised by the dataset publisher){% endif %}</h3>
+<h3>Source IP addresses{% if "source_ips" in anon %} (anonymised by the dataset publisher){% endif %}</h3>
 {{ cut(r.iocs.source_ips, "addresses") }}
 {% if r.iocs.source_ips.rows %}
 <div class="scroll"><table>
@@ -243,21 +244,21 @@ Evidence: {{ ev(n.evidence) }}</div></li>
 <p>None.</p>
 {% endif %}
 
-<h3>Access keys</h3>
+<h3>Access keys{% if "access_keys" in anon %} (anonymised by the dataset publisher){% endif %}</h3>
 {{ cut(r.iocs.access_keys, "keys") }}
 {% if r.iocs.access_keys.rows %}
 <div class="scroll"><table>
-<thead><tr><th>Access key ID</th><th>Kind</th><th>Events</th><th>First – last seen</th><th>Sessions</th><th>Evidence</th></tr></thead>
+<thead><tr><th>Access key ID</th><th>Kind</th><th>Anonymised</th><th>Events</th><th>First – last seen</th><th>Sessions</th><th>Evidence</th></tr></thead>
 <tbody>
 {% for x in r.iocs.access_keys.rows %}
-<tr><td class="v"><code>{{ x.value }}</code></td><td class="v">{{ x.kind }}</td><td class="n">{{ x.events | num }}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ x.sessions | some(5) }}</td><td>{{ ev(x.evidence) }}</td></tr>
+<tr><td class="v"><code>{{ x.value }}</code></td><td class="v">{{ x.kind }}</td><td>{{ "yes" if x.anonymised else "no" }}</td><td class="n">{{ x.events | num }}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ x.sessions | some(5) }}</td><td>{{ ev(x.evidence) }}</td></tr>
 {% endfor %}
 </tbody></table></div>
 {% else %}
 <p>None.</p>
 {% endif %}
 
-<h3>ARNs</h3>
+<h3>ARNs{% if "account_ids" in anon %} (account IDs anonymised by the dataset publisher){% endif %}</h3>
 {{ cut(r.iocs.arns, "ARNs") }}
 {% if r.iocs.arns.rows %}
 <div class="scroll"><table>

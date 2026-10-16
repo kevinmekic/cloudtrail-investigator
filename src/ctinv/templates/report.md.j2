@@ -1,6 +1,7 @@
 {#- Markdown report. Every {{ value }} is escaped by render.md_escape; macros only
     hold template text and numbers, so escaping their output again changes nothing. -#}
 {% macro cut(part, what) %}{% if part.total > part.rows | length %} (showing the first {{ part.rows | length | num }} of {{ part.total | num }} {{ what }}; the JSON file lists all){% endif %}{% endmacro %}
+{% set anon = r.anonymised.fields if r.anonymised else [] %}
 # {{ r.title }}
 
 - Generated: {{ r.generated_at | time }} UTC by ctinv {{ r.ctinv_version }}
@@ -92,7 +93,7 @@ Not part of a findings report: an investigation report follows one identity and 
 {{ pad }}  - Key {{ "created" if o.api == "iam:CreateAccessKey" else "issued" }} by {{ o.api }}, called by {{ o.caller }} at {{ o.event_time | time }}
 {% endfor %}
 {{ pad }}  - Identities: {{ n.identities | top }}
-{{ pad }}  - Source IPs: {{ n.source_ips | top }}{% if r.ip_warning %} (anonymised by the dataset publisher, see the indicators){% endif +%}
+{{ pad }}  - Source IPs: {{ n.source_ips | top }}{% if "source_ips" in anon %} (anonymised by the dataset publisher, see the indicators){% endif +%}
 {{ pad }}  - User agents: {{ n.user_agents | top }}
 {{ pad }}  - Regions: {{ n.regions | top }}
 {{ pad }}  - Evidence: {{ n.evidence | join(", ") }}
@@ -146,15 +147,15 @@ The events name no resource.
 {% endif %}
 ## Indicators (IOCs)
 
-{% if r.ip_warning %}
-> **{{ r.ip_warning.text }}**
+{% if r.anonymised %}
+> **{{ r.anonymised.text }}**
 >
-> Dataset: {{ r.ip_warning.datasets | join(", ") }}. See the limitations of the data.
+> Dataset: {{ r.anonymised.datasets | join(", ") }}. See the limitations of the data.
 
 {% endif %}
 Values as logged, by number of events. Evidence: the first and the last event with the value.
 
-### Source IP addresses{% if r.ip_warning %} (anonymised by the dataset publisher){% endif %}{{ cut(r.iocs.source_ips, "addresses") }}
+### Source IP addresses{% if "source_ips" in anon %} (anonymised by the dataset publisher){% endif %}{{ cut(r.iocs.source_ips, "addresses") }}
 
 {% if r.iocs.source_ips.rows %}
 | IP address | Anonymised | Public | Events | First – last seen | Sessions | Datasets | Evidence |
@@ -190,19 +191,19 @@ None.
 None.
 {% endif %}
 
-### Access keys{{ cut(r.iocs.access_keys, "keys") }}
+### Access keys{% if "access_keys" in anon %} (anonymised by the dataset publisher){% endif %}{{ cut(r.iocs.access_keys, "keys") }}
 
 {% if r.iocs.access_keys.rows %}
-| Access key ID | Kind | Events | First – last seen | Sessions | Evidence |
-|---|---|---:|---|---|---|
+| Access key ID | Kind | Anonymised | Events | First – last seen | Sessions | Evidence |
+|---|---|---|---:|---|---|---|
 {% for x in r.iocs.access_keys.rows %}
-| {{ x.value }} | {{ x.kind }} | {{ x.events | num }} | {{ x.first_seen | span(x.last_seen) }} | {{ x.sessions | some(5) }} | {{ x.evidence | join(", ") }} |
+| {{ x.value }} | {{ x.kind }} | {{ "yes" if x.anonymised else "no" }} | {{ x.events | num }} | {{ x.first_seen | span(x.last_seen) }} | {{ x.sessions | some(5) }} | {{ x.evidence | join(", ") }} |
 {% endfor %}
 {% else %}
 None.
 {% endif %}
 
-### ARNs{{ cut(r.iocs.arns, "ARNs") }}
+### ARNs{% if "account_ids" in anon %} (account IDs anonymised by the dataset publisher){% endif %}{{ cut(r.iocs.arns, "ARNs") }}
 
 {% if r.iocs.arns.rows %}
 | ARN | Seen as | Events | First – last seen | Sessions | Evidence |

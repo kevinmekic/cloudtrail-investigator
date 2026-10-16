@@ -16,14 +16,15 @@ from ctinv.detect import parse_rule, run_rules
 from ctinv.investigate import Scope, investigate
 from ctinv.render import md_escape, render_html, render_markdown
 from ctinv.report import (
+    ANONYMISED_FIELDS,
     BURST_EVENTS,
     BURST_SECONDS,
     DEFAULT_LIMITS,
-    IP_WARNING,
     PERIOD_GAP_SECONDS,
     Limits,
     Report,
     ReportError,
+    anonymisation_warning,
     findings_report,
     investigation_report,
     write_report,
@@ -503,7 +504,7 @@ def test_templates_escape_every_value() -> None:
         "json_file": hostile,
         "summary": [{"text": hostile, "evidence": ["e1"]}],
         "datasets": [],
-        "ip_warning": None,
+        "anonymised": None,
         "moments": {"rows": [], "total": 0},
         "periods": None,
         "findings": {"status": "none", "total": 0, "rules": 0, "tactics": []},
@@ -543,30 +544,70 @@ def test_templates_escape_every_value() -> None:
 # --- datasets and anonymised IPs ---------------------------------------------------
 
 
-def test_anonymised_source_ips_are_labelled(tmp_path: Path) -> None:
+FLAWS_LABEL = (
+    "Source IPs, account IDs and access keys were anonymised by the dataset publisher - "
+    "not real infrastructure, accounts or credentials. Do not block, look up or report them."
+)
+
+
+@pytest.mark.parametrize(
+    "fields, expected",
+    [
+        (["access_keys", "source_ips", "account_ids"], FLAWS_LABEL),
+        (
+            ["source_ips"],
+            "Source IPs were anonymised by the dataset publisher - not real infrastructure. "
+            "Do not block, look up or report them.",
+        ),
+        (
+            ["access_keys", "account_ids"],
+            "Account IDs and access keys were anonymised by the dataset publisher - "
+            "not real accounts or credentials. Do not block, look up or report them.",
+        ),
+    ],
+)
+def test_anonymisation_warning_names_every_field(fields: list[str], expected: str) -> None:
+    assert anonymisation_warning(fields) == expected
+
+
+def test_anonymised_fields_are_labelled(tmp_path: Path) -> None:
     report = investigation(build(tmp_path, dataset="flaws_cloud"))
     paths = write_report(report, tmp_path / "out")
     md, html = paths[0].read_text(), paths[1].read_text()
-    assert IP_WARNING == (
-        "Source IPs anonymised by the dataset publisher - not real attacker infrastructure. "
-        "Do not block, look up or report them."
-    )
+    model = report.model
+    assert model["anonymised"] == {
+        "text": FLAWS_LABEL,
+        "fields": ["source_ips", "account_ids", "access_keys"],
+        "datasets": ["flaws_cloud"],
+    }
     iocs = md[md.index("## Indicators (IOCs)") : md.index("## Limitations")]
-    assert f"> **{md_escape(IP_WARNING)}**" in iocs
+    assert f"> **{md_escape(FLAWS_LABEL)}**" in iocs
     assert "### Source IP addresses (anonymised by the dataset publisher)" in iocs
+    assert "### Access keys (anonymised by the dataset publisher)" in iocs
+    assert "### ARNs (account IDs anonymised by the dataset publisher)" in iocs
     html_iocs = html[html.index('<h2 id="iocs">') : html.index('<h2 id="limitations">')]
-    assert f'<div class="warning" role="alert">{IP_WARNING}<br>' in html_iocs
-    assert all(x["anonymised"] for x in report.model["iocs"]["source_ips"]["rows"])
+    assert f'<div class="warning" role="alert">{FLAWS_LABEL}<br>' in html_iocs
+    assert "<h3>Access keys (anonymised by the dataset publisher)</h3>" in html_iocs
+    assert all(x["anonymised"] for x in model["iocs"]["source_ips"]["rows"])
+    assert all(x["anonymised"] for x in model["iocs"]["access_keys"]["rows"])
     # Whether a random replacement address is public says nothing; it is not shown.
     assert "| 203.0.113.10 | yes | n/a | 17 |" in iocs
-    limitations = " ".join(s["text"] for s in report.model["limitations"])
+    assert f"| {KEY_A} | long-term key | yes |" in iocs
+    summary = [s["text"] for s in model["summary"]]
+    assert (
+        "Source IPs, account IDs and access keys in this data were anonymised by the dataset "
+        "publisher (flaws_cloud): they are not real infrastructure, accounts or credentials."
+    ) in summary
+    limitations = " ".join(s["text"] for s in model["limitations"])
     assert "wernicke" in limitations
 
 
 def test_undescribed_dataset_is_not_labelled_but_flagged(written: dict) -> None:
     model = written["report"].model
-    assert model["ip_warning"] is None
-    assert IP_WARNING not in written["md"]
+    assert model["anonymised"] is None
+    assert "anonymised by the dataset publisher" not in written["md"]
+    assert "| Access key ID | Kind | Anonymised |" in written["md"]
+    assert f"| {KEY_A} | long-term key | no |" in written["md"]
     assert any("is not described" in s["text"] for s in model["limitations"])
 
 
@@ -674,7 +715,7 @@ def test_cli_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_documented_defaults_match_the_code() -> None:
     doc = (Path(__file__).resolve().parent.parent / "docs" / "REPORTING.md").read_text()
-    assert f"\n> {IP_WARNING}\n" in doc
+    assert f"\n> {anonymisation_warning(list(ANONYMISED_FIELDS))}\n" in doc
     assert f"first {BURST_SECONDS}-second window with at least {BURST_EVENTS} of them" in doc
     assert f"no gap between them exceeds {PERIOD_GAP_SECONDS // 60} minutes" in doc
     assert f"| `--period-gap SECONDS` | {PERIOD_GAP_SECONDS} |" in doc
