@@ -202,10 +202,127 @@ def _run_detect(args: argparse.Namespace) -> int:
     return 0
 
 
+def _time_argument(text: str):
+    from ctinv.investigate import parse_time
+
+    try:
+        return parse_time(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None
+
+
+def _count_argument(text: str) -> int:
+    try:
+        value = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a whole number") from None
+    if value < 0:
+        raise argparse.ArgumentTypeError(f"{value} is negative")
+    return value
+
+
+def _configure_investigate(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument(
+        "--db", type=Path, default=Path("ctinv.duckdb"), help="DuckDB file (default: ctinv.duckdb)"
+    )
+    start = sub.add_mutually_exclusive_group(required=True)
+    start.add_argument("--access-key", metavar="ID", help="start from this access key ID")
+    start.add_argument(
+        "--principal",
+        metavar="ARN",
+        help="start from this principal (userIdentity.arn); a role ARN stands for every "
+        "session of the role",
+    )
+    sub.add_argument(
+        "--from",
+        dest="start",
+        type=_time_argument,
+        metavar="TIME",
+        help="only events at or after TIME: ISO 8601 date or date and time, e.g. 2019-08-21 "
+        "or 2019-08-21T07:41:00Z (without an offset: UTC)",
+    )
+    sub.add_argument(
+        "--to", dest="end", type=_time_argument, metavar="TIME", help="only events before TIME"
+    )
+    sub.add_argument(
+        "--max-depth",
+        type=_count_argument,
+        default=3,
+        metavar="N",
+        help="follow obtained credentials at most N pivots deep (default: 3; 0: no pivots)",
+    )
+    sub.add_argument(
+        "--max-sessions",
+        type=_count_argument,
+        default=1000,
+        metavar="N",
+        help="follow at most N sessions besides the start (default: 1000)",
+    )
+    sub.add_argument(
+        "--max-events",
+        type=_count_argument,
+        default=100_000,
+        metavar="N",
+        help="list at most N events in the JSON timeline; counts stay complete (default: 100000)",
+    )
+    sub.add_argument(
+        "--follow-created-keys",
+        action="store_true",
+        help="also follow long-term keys created with iam:CreateAccessKey (often handed "
+        "to someone else, so off by default)",
+    )
+    sub.add_argument(
+        "--output", "-o", type=Path, metavar="FILE", help="write the investigation as JSON to FILE"
+    )
+
+
+def _run_investigate(args: argparse.Namespace) -> int:
+    from rich.console import Console
+
+    from ctinv.investigate import InvestigationError, Scope, investigate, write_json
+    from ctinv.schema import connect
+    from ctinv.summary import print_investigation
+
+    err = Console(stderr=True)
+    if not args.db.exists():
+        err.print(f"[red]error:[/red] database {args.db} not found; run ctinv ingest first")
+        return 2
+    try:
+        scope = Scope(
+            access_key=args.access_key,
+            principal=args.principal,
+            start=args.start,
+            end=args.end,
+            max_depth=args.max_depth,
+            max_sessions=args.max_sessions,
+            max_events=args.max_events,
+            follow_created_keys=args.follow_created_keys,
+        )
+    except InvestigationError as exc:
+        err.print(f"[red]error:[/red] {exc}", highlight=False)
+        return 2
+    con = connect(args.db)
+    try:
+        inv = investigate(con, scope)
+    except InvestigationError as exc:
+        err.print(f"[red]error:[/red] {exc}", highlight=False)
+        return 1
+    finally:
+        con.close()
+
+    out = Console()
+    print_investigation(out, inv, str(args.db))
+    if args.output:
+        write_json(inv, args.output, str(args.db))
+        out.print(f"\nInvestigation written to {args.output}", highlight=False)
+    return 0
+
+
 Handler = Callable[[argparse.Namespace], int]
 HANDLERS: dict[str, tuple[Callable[[argparse.ArgumentParser], None] | None, Handler]] = {
     "ingest": (_configure_ingest, _run_ingest),
     "detect": (_configure_detect, _run_detect),
+    "investigate": (_configure_investigate, _run_investigate),
 }
 
 

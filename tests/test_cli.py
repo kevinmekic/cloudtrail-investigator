@@ -16,7 +16,7 @@ def test_help_lists_all_subcommands(capsys: pytest.CaptureFixture[str]) -> None:
         assert command in out
 
 
-@pytest.mark.parametrize("command", ["investigate", "report", "evaluate"])
+@pytest.mark.parametrize("command", ["report", "evaluate"])
 def test_placeholder_subcommands(command: str, capsys: pytest.CaptureFixture[str]) -> None:
     assert main([command]) == 1
     assert capsys.readouterr().err.strip() == f"{command}: not implemented yet"

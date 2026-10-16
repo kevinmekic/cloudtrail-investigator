@@ -28,14 +28,17 @@ are always complete). A key already in the graph is never followed again, so
 cycles end.
 """
 
+import dataclasses
+import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import duckdb
 
-from ctinv import macros
+from ctinv import __version__, macros
 
 # STS calls that issue temporary credentials. A call not listed here also
 # counts if its response carries credentials (future STS APIs).
@@ -177,8 +180,8 @@ class Scope:
     follow_created_keys: bool = False
 
     def __post_init__(self) -> None:
-        if (self.access_key is None) == (self.principal is None):
-            raise InvestigationError("give exactly one of access key and principal")
+        if bool(self.access_key) == bool(self.principal):
+            raise InvestigationError("give exactly one non-empty access key or principal")
         if self.start and self.end and self.start >= self.end:
             raise InvestigationError("the start of the time range must be before its end")
         for name in ("max_depth", "max_sessions", "max_events", "max_resources", "max_evidence"):
@@ -278,10 +281,11 @@ def _window_params(scope: Scope) -> dict[str, Any]:
 
 
 def investigate(con: duckdb.DuckDBPyConnection, scope: Scope) -> Investigation:
-    """Build the session graph and timeline of the starting identity.
+    """Investigate the starting identity and the sessions it obtained.
 
-    Works in temporary tables of the connection (``inv_*``); the database
-    itself is not changed.
+    Returns the session graph with every pivot, per-API counts, the timeline,
+    the blast radius and the linked findings. Works in temporary tables of the
+    connection (``inv_*``); the database itself is not changed.
     """
     macros.register(con)
     window = _window_sql(scope)
@@ -791,3 +795,73 @@ def _findings(con: duckdb.DuckDBPyConnection, scope: Scope) -> list[dict[str, An
         {"evidence": scope.max_evidence},
     ).fetchall()
     return [dict(zip(FINDING_FIELDS, row, strict=True)) for row in rows]
+
+
+FORMAT = "ctinv-investigation/1"
+DEFINITIONS = {
+    "times": "UTC; the time range includes its start and excludes its end",
+    "outcomes": {
+        "succeeded": "no errorCode",
+        "denied": "a permission error (AccessDenied, AccessDeniedException, "
+        "UnauthorizedOperation, Client.UnauthorizedOperation, AuthorizationError, "
+        "NotAuthorized)",
+        "failed": "any other errorCode",
+    },
+    "pivot_statuses": PIVOT_STATUSES,
+    "event_ids": "evidence lists hold the first eventIDs by time, up to max_evidence; "
+    "the counts next to them are complete",
+}
+
+
+def parse_time(text: str) -> datetime:
+    """An ISO 8601 date or date and time as naive UTC; without an offset it is UTC."""
+    try:
+        value = datetime.fromisoformat(text.strip())
+    except ValueError:
+        raise ValueError(f"{text!r} is not an ISO 8601 date or time") from None
+    if value.tzinfo is not None:
+        value = value.astimezone(UTC).replace(tzinfo=None)
+    return value
+
+
+def to_dict(inv: Investigation, database: str | None = None) -> dict[str, Any]:
+    """The investigation as JSON-ready data (datetimes stay datetimes)."""
+    scope = dataclasses.asdict(inv.scope)
+    return {
+        "format": FORMAT,
+        "ctinv_version": __version__,
+        "generated_at": datetime.now(UTC).replace(tzinfo=None, microsecond=0),
+        "database": database,
+        "scope": scope,
+        "definitions": DEFINITIONS,
+        "summary": inv.summary
+        | {
+            "timeline_listed": len(inv.timeline),
+            "timeline_truncated": len(inv.timeline) < inv.summary["events"],
+        },
+        "sessions": [dataclasses.asdict(s) for s in inv.sessions],
+        "pivots": [dataclasses.asdict(p) for p in inv.pivots],
+        "apis": inv.apis,
+        "blast_radius": inv.blast_radius,
+        "findings": inv.findings,
+        "timeline": inv.timeline,
+    }
+
+
+def _json_default(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return value.isoformat() + "Z"
+    raise TypeError(f"{type(value).__name__} is not JSON serializable")
+
+
+def write_json(inv: Investigation, path: Path, database: str | None = None) -> None:
+    """Write the investigation as indented JSON, with one line per timeline event."""
+    data = to_dict(inv, database)
+    timeline = data.pop("timeline")
+    head = json.dumps(data, indent=2, default=_json_default)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as out:
+        out.write(head[: -len("\n}")] + ',\n  "timeline": [')
+        for n, event in enumerate(timeline):
+            out.write(("," if n else "") + "\n    " + json.dumps(event, default=_json_default))
+        out.write("\n  ]\n}\n")

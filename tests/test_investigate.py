@@ -1,5 +1,6 @@
 """Tests for the investigation: session graph, pivots, timeline, blast radius, findings."""
 
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -7,8 +8,15 @@ from typing import Any
 import pytest
 
 from cloudtrail_events import ACCOUNT, aws_service, event, make_db
+from ctinv.cli import main
 from ctinv.detect import load_rules, run_rules
-from ctinv.investigate import Investigation, InvestigationError, Scope, investigate
+from ctinv.investigate import (
+    Investigation,
+    InvestigationError,
+    Scope,
+    investigate,
+    parse_time,
+)
 from ctinv.schema import connect
 
 # Clearly fake keys in the format CloudTrail logs.
@@ -365,6 +373,7 @@ def test_unknown_starting_point_is_an_error(db: Path) -> None:
     ("scope", "message"),
     [
         ({}, "exactly one"),
+        ({"access_key": ""}, "exactly one"),
         ({"access_key": KEY_A, "principal": "arn:aws:iam::111122223333:user/alice"}, "exactly one"),
         ({"access_key": KEY_A, "start": t(5), "end": t(5)}, "before its end"),
         ({"access_key": KEY_A, "max_depth": -1}, "max_depth"),
@@ -565,3 +574,76 @@ def test_findings_of_sessions_in_the_graph(tmp_path: Path) -> None:
     assert (finding["evidence_count"], finding["evidence_in_investigation"]) == (1, 1)
     # Detection ran, but nothing of it lies in this time range.
     assert run(db, access_key=KEY_A, end=t(2)).findings == []
+
+
+# ----------------------------------------------------------------------------- command line
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("2019-08-21", datetime(2019, 8, 21)),
+        ("2019-08-21 07:41", datetime(2019, 8, 21, 7, 41)),
+        ("2019-08-21T07:41:19Z", datetime(2019, 8, 21, 7, 41, 19)),
+        ("2019-08-21T09:41:19+02:00", datetime(2019, 8, 21, 7, 41, 19)),
+    ],
+)
+def test_parse_time_returns_utc(text: str, expected: datetime) -> None:
+    assert parse_time(text) == expected
+
+
+def test_cli_writes_the_investigation_as_json(db: Path, tmp_path: Path) -> None:
+    out = tmp_path / "out" / "inv.json"
+    assert main(["investigate", "--db", str(db), "--access-key", KEY_A, "-o", str(out)]) == 0
+    data = json.loads(out.read_text())
+    assert data["format"] == "ctinv-investigation/1"
+    assert data["scope"]["access_key"] == KEY_A
+    assert [s["id"] for s in data["sessions"]] == [KEY_A, KEY_B, KEY_S, KEY_C, KEY_B2]
+    assert data["summary"]["timeline_truncated"] is False
+    assert [e["event_id"] for e in data["timeline"]] == [eid(n) for n in range(1, 15)]
+    assert data["timeline"][0]["event_time"] == "2023-01-01T00:01:00Z"
+    assert data["findings"] is None
+    # One line per timeline event.
+    lines = out.read_text().splitlines()
+    assert sum(line.startswith('    {"event_id"') for line in lines) == 14
+
+
+def test_cli_console_summary(
+    db: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("COLUMNS", "200")  # tables are not squeezed
+    assert (
+        main(["investigate", "--db", str(db), "--access-key", KEY_A, "--to", t(9).isoformat()]) == 0
+    )
+    out = capsys.readouterr().out
+    assert f"Investigation of access key {KEY_A}" in out
+    assert "Session graph" in out
+    assert f"S2 {KEY_C}" in out
+    assert "not followed: 1 × sts:AssumeRole, request failed" in out
+    assert "failed: TrailNotFoundException" in out
+    assert "detection has not been run" in out
+
+
+def test_cli_starts_from_a_principal(db: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    arn = f"arn:aws:iam::{ACCOUNT}:role/B"
+    assert main(["investigate", "--db", str(db), "--principal", arn]) == 0
+    assert f"Investigation of principal {arn}" in capsys.readouterr().out
+
+
+def test_cli_errors(db: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    base = ["investigate", "--db", str(db)]
+    assert main(["investigate", "--db", str(tmp_path / "none.duckdb"), "--access-key", KEY_A]) == 2
+    assert "not found" in capsys.readouterr().err
+    assert main([*base, "--access-key", "AKIAEXAMPLENOSUCH001"]) == 1
+    assert "no events for access key AKIAEXAMPLENOSUCH001" in capsys.readouterr().err
+    assert main([*base, "--access-key", KEY_A, "--from", "2023-02-01", "--to", "2023-01-01"]) == 2
+    assert "before its end" in capsys.readouterr().err
+    for bad in (
+        [*base],
+        [*base, "--access-key", KEY_A, "--principal", "arn:aws:iam::111122223333:user/alice"],
+        [*base, "--access-key", KEY_A, "--from", "yesterday"],
+        [*base, "--access-key", KEY_A, "--max-depth", "-1"],
+    ):
+        with pytest.raises(SystemExit) as exc:
+            main(bad)
+        assert exc.value.code == 2
