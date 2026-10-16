@@ -111,10 +111,18 @@ The unit is the **technique**, not events, findings, runs or files. Several
 scenario files or Stratus runs of one technique (e.g. three `cloudtrail-stop`
 detonations) are not independent samples and give one result.
 
-- **Test set:** a technique is detected if at least one finding fired in at
-  least one of its in-scope scenario files. The results also show how many of
-  its files were detected and, as a stricter variant, how many techniques had
-  every in-scope file detected.
+- **Test set:** the headline counts a technique as detected if a rule mapped
+  to that ATT&CK technique (or its parent or sub-technique; siblings do not
+  count) fired in at least one of its in-scope scenario files. Next to it come
+  "any finding in the scenario" (any rule fired in at least one in-scope file)
+  and that rate with every excluded technique counted as missed. A rule can fire
+  on a scenario for an unrelated reason (e.g. root activity in a scenario about
+  something else), so the technique-matched rate is the one that says whether
+  the rules recognise the technique. This order was set after the first run; the
+  method first named "any finding" the main result. All three numbers come from
+  that same frozen run, and the headline is the lowest of them. The results
+  also show how many of a technique's files were detected and how many
+  techniques had every in-scope file detected.
 - **Development set:** a technique is detected if at least one finding has an
   evidence event with role `attack` for that technique. Strict variant: only
   attack events marked `"documented": true` (calls the technique's source
@@ -229,10 +237,10 @@ set-up calls.
 
 ### Further variants
 
-Each result also states: the rate by a rule mapped to the same ATT&CK
-technique (or its parent or sub-technique; siblings do not count), because a
-rule can fire on a scenario for an unrelated reason (e.g. root activity in an
-exfiltration scenario); and the rate without separately reported rule parts.
+Each result also states the rate without separately reported rule parts. On
+the development set, the rate by a rule mapped to the technique's stated
+ATT&CK ID is a variant, not the headline, because only 12 of the 26 detonated
+techniques have such an ID.
 
 ### Manual review sample (flaws.cloud)
 
@@ -272,64 +280,71 @@ summarise a review file whose findings the database no longer yields exactly.
 timestamp. The development set gave exactly the same 22 findings (same IDs) in
 its own database as in a database shared with flaws.cloud.
 
-### Test set (held out): 9 / 23 in-scope ATT&CK techniques detected
+### Test set (held out): 5 / 23 in-scope ATT&CK techniques detected by a rule mapped to the technique
 
 27 techniques are labelled; 4 are excluded as label ambiguous (none as out of
-scope by design).
+scope by design). The exclusions were committed before the first run and
+confirmed unchanged by the project owner afterwards.
 
-| Variant | Detected |
+| Measure | Detected |
 |---|---|
-| **Main result** | **9 / 23** |
-| Without the two techniques exposed before the split | 8 / 21 |
-| By a rule mapped to the same technique (or its parent or sub-technique) | 5 / 23 |
-| Every in-scope file of the technique detected | 6 / 23 |
-| Without separately reported rule parts | 9 / 23 |
-| Every record kept (reused eventIDs made unique) | 9 / 23 |
-| Excluded techniques counted as missed | 9 / 27 |
+| **By a rule mapped to the technique (or its parent or sub-technique)** | **5 / 23** |
+| Any finding in the scenario | 9 / 23 |
+| Any finding, excluded techniques counted as missed | 9 / 27 |
+| Any finding, without the two techniques exposed before the split | 8 / 21 |
+| Any finding, every in-scope file of the technique detected | 6 / 23 |
+| Any finding, without separately reported rule parts | 9 / 23 |
+| Any finding, every record kept (reused eventIDs made unique) | 9 / 23 |
 
-| ATT&CK v20.0 | Name | Result | Rules that fired | Files detected | First finding | Note |
-|---|---|---|---|---|---|---|
-| T1021.004 | SSH | missed | – | 0 / 1 | – |  |
-| T1021.008 | Direct Cloud VM Connections | missed | – | 0 / 1 | – |  |
-| T1078 | Valid Accounts | detected | `console-login-without-mfa`, `credentials-created-for-other-user` | 2 / 6 | +0 s |  |
-| T1078.004 | Cloud Accounts | detected | `console-login-without-mfa`, `root-account-usage` | 1 / 1 | +0 s |  |
-| T1087.004 | Cloud Account | label ambiguous | – | – | – | no file with a matching label (see the label review) |
-| T1098 | Account Manipulation | missed | – | 0 / 3 | – |  |
-| T1098.003 | Additional Cloud Roles | missed | – | 0 / 1 | – |  |
-| T1110.001 | Password Guessing | missed | – | 0 / 1 | – |  |
-| T1110.002 | Password Cracking | label ambiguous | – | – | – | no file with a matching label (see the label review) |
-| T1110.003 | Password Spraying | missed | – | 0 / 2 | – |  |
-| T1119 | Automated Collection | missed | – | 0 / 1 | – |  |
-| T1201 | Password Policy Discovery | detected | `root-account-usage` | 1 / 1 | +0 s to +76 min | exposed before the split |
-| T1204 | User Execution | label ambiguous | – | – | – | no file with a matching label (see the label review) |
-| T1204.003 | Malicious Image | missed | – | 0 / 1 | – | exposed before the split |
-| T1485 | Data Destruction | missed | – | 0 / 1 | – |  |
-| T1486 | Data Encrypted for Impact | missed | – | 0 / 1 | – |  |
-| T1526 | Cloud Service Discovery | detected | `access-denied-spike`, `discovery-burst` | 1 / 1 | +0 s to +3 min |  |
-| T1530 | Data from Cloud Storage | missed | – | 0 / 1 | – |  |
-| T1537 | Transfer Data to Cloud Account | detected | `snapshot-or-image-shared` | 2 / 2 | +0 s |  |
-| T1552 | Unsecured Credentials | detected | `access-denied-spike` | 1 / 1 | +0 s to +1 s |  |
-| T1555.006 | Cloud Secrets Management Stores | missed | – | 0 / 1 | – |  |
-| T1578.005 | Modify Cloud Compute Configurations | missed | – | 0 / 1 | – |  |
-| T1580 | Cloud Infrastructure Discovery | detected | `access-denied-spike`, `discovery-burst` | 2 / 3 | +0 s to +4 min |  |
-| T1586.003 | Cloud Accounts | label ambiguous | – | – | – | no file with a matching label (see the label review); fired on its excluded file: `console-login-without-mfa`, `root-account-usage` |
-| T1621 | Multi-Factor Authentication Request Generation | detected | `root-account-usage` | 1 / 1 | +0 s |  |
-| T1685.002 (formerly T1562.008) | Disable or Modify Cloud Log | detected | `cloudtrail-tampering` | 3 / 6 | +0 s |  |
-| T1686.001 (formerly T1562.007) | Cloud Firewall | missed | – | 0 / 1 | – |  |
+| ATT&CK v20.0 | Name | Same-technique rule | Any finding | Rules that fired | Files detected | First finding | Note |
+|---|---|---|---|---|---|---|---|
+| T1021.004 | SSH | no | missed | – | 0 / 1 | – |  |
+| T1021.008 | Direct Cloud VM Connections | no | missed | – | 0 / 1 | – |  |
+| T1078 | Valid Accounts | yes | detected | `console-login-without-mfa`, `credentials-created-for-other-user` | 2 / 6 | +0 s |  |
+| T1078.004 | Cloud Accounts | yes | detected | `console-login-without-mfa`, `root-account-usage` | 1 / 1 | +0 s |  |
+| T1087.004 | Cloud Account | – | label ambiguous | – | – | – | no file with a matching label (see the label review) |
+| T1098 | Account Manipulation | no | missed | – | 0 / 3 | – |  |
+| T1098.003 | Additional Cloud Roles | no | missed | – | 0 / 1 | – |  |
+| T1110.001 | Password Guessing | no | missed | – | 0 / 1 | – |  |
+| T1110.002 | Password Cracking | – | label ambiguous | – | – | – | no file with a matching label (see the label review) |
+| T1110.003 | Password Spraying | no | missed | – | 0 / 2 | – |  |
+| T1119 | Automated Collection | no | missed | – | 0 / 1 | – |  |
+| T1201 | Password Policy Discovery | no | detected | `root-account-usage` | 1 / 1 | +0 s to +76 min | exposed before the split |
+| T1204 | User Execution | – | label ambiguous | – | – | – | no file with a matching label (see the label review) |
+| T1204.003 | Malicious Image | no | missed | – | 0 / 1 | – | exposed before the split |
+| T1485 | Data Destruction | no | missed | – | 0 / 1 | – |  |
+| T1486 | Data Encrypted for Impact | no | missed | – | 0 / 1 | – |  |
+| T1526 | Cloud Service Discovery | no | detected | `access-denied-spike`, `discovery-burst` | 1 / 1 | +0 s to +3 min |  |
+| T1530 | Data from Cloud Storage | no | missed | – | 0 / 1 | – |  |
+| T1537 | Transfer Data to Cloud Account | yes | detected | `snapshot-or-image-shared` | 2 / 2 | +0 s |  |
+| T1552 | Unsecured Credentials | no | detected | `access-denied-spike` | 1 / 1 | +0 s to +1 s |  |
+| T1555.006 | Cloud Secrets Management Stores | no | missed | – | 0 / 1 | – |  |
+| T1578.005 | Modify Cloud Compute Configurations | no | missed | – | 0 / 1 | – |  |
+| T1580 | Cloud Infrastructure Discovery | yes | detected | `access-denied-spike`, `discovery-burst` | 2 / 3 | +0 s to +4 min |  |
+| T1586.003 | Cloud Accounts | – | label ambiguous | – | – | – | no file with a matching label (see the label review); fired on its excluded file: `console-login-without-mfa`, `root-account-usage` |
+| T1621 | Multi-Factor Authentication Request Generation | no | detected | `root-account-usage` | 1 / 1 | +0 s |  |
+| T1685.002 (formerly T1562.008) | Disable or Modify Cloud Log | yes | detected | `cloudtrail-tampering` | 3 / 6 | +0 s |  |
+| T1686.001 (formerly T1562.007) | Cloud Firewall | no | missed | – | 0 / 1 | – |  |
 
 How to read it (interpretation of the findings' evidence):
 
-- **Four of the nine detections come from rules mapped to another technique.**
-  T1201 (password policy) and T1621 (failed MFA) are found only because those
-  scenarios were run as root (`root-account-usage`); T1526 (a security scanner)
-  and T1552 (`ec2:GetPasswordData`) through the burst and permission-error rules,
-  which are mapped to T1580. By a rule mapped to the technique itself: 5 / 23.
+- **Five techniques are detected by a rule mapped to them:** T1078 and
+  T1078.004 (`console-login-without-mfa`, `root-account-usage`), T1537
+  (`snapshot-or-image-shared`), T1580 (the burst and permission-error rules) and
+  T1685.002 (`cloudtrail-tampering`).
+- **Four more count only as "any finding in the scenario".** T1201 (password
+  policy) and T1621 (failed MFA) are found only because those scenarios were
+  run as root (`root-account-usage`); T1526 (a security scanner) and T1552
+  (`ec2:GetPasswordData`) through the burst and permission-error rules, which
+  are mapped to T1580.
 - **The T1621 detection rests on failed root sign-ins**, which
   `root-account-usage` counts as root activity. Its findings report them as
   succeeded ("0 failed"): CloudTrail records a failed console sign-in in
   `responseElements.ConsoleLogin` ("Failure"), not in `errorCode`, and the
   framework derives a finding's outcome from `errorCode`. This is a known gap,
-  not fixed after the rules were frozen.
+  not fixed after the rules were frozen. It is to be fixed as a bug fix; the
+  evaluation run after that fix will be reported as a separate post-freeze
+  result, and the frozen result here stays the primary one.
 - **14 in-scope techniques are missed.** For 13 of them no rule looks for the
   behaviour in the scenario (SSH keys pushed through EC2 Instance Connect,
   deleted IAM groups and policies, failed console sign-ins, DataSync tasks,
@@ -406,14 +421,47 @@ How to read it (interpretation of the findings' evidence):
 
 ### Manually reviewed sample (flaws.cloud)
 
+**This sample comes from the development data the rules were built on.**
+flaws.cloud was used to write the rules and to choose their thresholds, so the
+absence of false positives here says little about false positives on data the
+rules have not seen. It is a manually reviewed sample, not a measured
+false-positive rate, and it has one reviewer.
+
 65 findings were drawn (seed `ctinv-review-1`, up to 10 per rule): all findings
 of `admin-policy-attached` (1), `cloudtrail-tampering` (3),
 `console-login-without-mfa` (1) and `credentials-created-for-other-user` (10),
-and 10 each of `access-denied-spike` (540), `discovery-burst` (332),
-`new-region-activity` (15), `root-account-usage` (69) and
-`snapshot-or-image-shared` (37). Every finding has a proposed label and reason;
-the human decisions are not made yet. Once they are, this section reports the
-decided labels per rule and how many of the 65 proposals the reviewer changed.
+and 10 each of the other five rules. Labels proposed by the tool author's
+assistant, each reviewed and decided by a human: all 65 are decided.
+
+| Rule | Findings | Sampled | true_positive | benign_true_positive | false_positive | unsure | Proposals changed |
+|---|---|---|---|---|---|---|---|
+| `access-denied-spike` | 540 | 10 | 10 | 0 | 0 | 0 | 1 |
+| `admin-policy-attached` | 1 | 1 | 0 | 1 | 0 | 0 | 0 |
+| `cloudtrail-tampering` | 3 | 3 | 2 | 1 | 0 | 0 | 0 |
+| `console-login-without-mfa` | 1 | 1 | 0 | 1 | 0 | 0 | 0 |
+| `credentials-created-for-other-user` | 10 | 10 | 0 | 10 | 0 | 0 | 0 |
+| `discovery-burst` | 332 | 10 | 7 | 3 | 0 | 0 | 1 |
+| `new-region-activity` | 15 | 10 | 9 | 1 | 0 | 0 | 0 |
+| `root-account-usage` | 69 | 10 | 0 | 10 | 0 | 0 | 0 |
+| `snapshot-or-image-shared` | 37 | 10 | 9 | 1 | 0 | 0 | 0 |
+| **Total** | | **65** | **37** | **28** | **0** | **0** | **2** |
+
+- **The reviewer changed 2 of the 65 proposals.** Both were the only proposals
+  marked `unsure`, and both were decided `true_positive`: 33 denied
+  `sts:AssumeRole` calls in 47 s whose requested role is not logged, and a Scout
+  Suite scan (590 of 926 calls failed). Both use the `backup` user's key, and
+  the logs alone could not decide them. The reviewer used knowledge from
+  outside the logs: that key belongs to the dataset's public challenge, so any
+  use of it is unauthorised by design. The other 63 proposals were kept.
+- **No false positives, but 28 benign true positives.** Every sampled finding
+  shows the behaviour its rule describes. 28 of 65 are expected activity (the
+  account owner's administration, mostly in MFA-authenticated root console
+  sessions, and a monitoring tool's own role) that an analyst would still have
+  to look at and close: all 10 sampled `root-account-usage` findings and all 10
+  `credentials-created-for-other-user` findings are of this kind.
+- flaws.cloud is mostly attack traffic against a public challenge, with little
+  ordinary activity, which also limits what the sample can show about noise in
+  a normal account.
 
 ## Limitations
 
