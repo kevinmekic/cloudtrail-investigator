@@ -149,21 +149,96 @@ def create_table_sql(
     return f"CREATE TABLE IF NOT EXISTS {table} (\n" + ",\n".join(parts) + "\n)"
 
 
-def connect(db_path: str | Path, memory_limit: str | None = None) -> duckdb.DuckDBPyConnection:
-    """Open (or create) the database and make sure all tables exist.
+TABLES = ("events", "quarantine", "ingested_files", "findings", "rule_runs")
+
+
+class DatabaseError(Exception):
+    """The database cannot be opened, or it is not a ctinv database."""
+
+
+def connect(
+    db_path: str | Path,
+    memory_limit: str | None = None,
+    *,
+    create: bool = True,
+    read_only: bool = False,
+) -> duckdb.DuckDBPyConnection:
+    """Open the database and make sure all tables exist.
+
+    With ``create`` (ingest), a missing file is created and missing tables are
+    added. Without it, the file must exist and already hold the ``events``
+    table, so that no command adds tables to a foreign or empty database.
+    ``read_only`` opens it without write access, for commands that only read;
+    it then needs every table.
 
     ``memory_limit`` is a DuckDB size such as "1GB"; DuckDB spills to disk
     beyond it. Without it, DuckDB may use up to 80% of the machine's memory.
     """
-    con = duckdb.connect(str(db_path))
+    in_memory = str(db_path) == ":memory:"
+    if not create and not in_memory and not Path(db_path).is_file():
+        raise DatabaseError(f"database {db_path} not found; run ctinv ingest first")
+    try:
+        con = duckdb.connect(str(db_path), read_only=read_only)
+    except duckdb.Error as exc:
+        raise DatabaseError(f"cannot open database {db_path}: {exc}") from None
+    try:
+        _prepare(con, db_path, memory_limit, create=create, read_only=read_only)
+    except BaseException:
+        con.close()
+        raise
+    return con
+
+
+def _prepare(
+    con: duckdb.DuckDBPyConnection,
+    db_path: str | Path,
+    memory_limit: str | None,
+    *,
+    create: bool,
+    read_only: bool,
+) -> None:
+    (path,) = con.execute(
+        "SELECT path FROM duckdb_databases() WHERE database_name = current_database()"
+    ).fetchone()
+    if path is None and str(db_path) != ":memory:":
+        # DuckDB opens a data file (e.g. .json or .parquet) as an in-memory
+        # database with a view on it: anything written would be lost on close.
+        raise DatabaseError(f"{db_path} is not a DuckDB database file")
     if memory_limit:
         con.execute("SET memory_limit = ?", [memory_limit])
     # Defence in depth: nothing should depend on the machine's local time zone.
     con.execute("SET TimeZone = 'UTC'")
+    if not create:
+        tables = {
+            row[0]
+            for row in con.execute(
+                "SELECT table_name FROM duckdb_tables() "
+                "WHERE database_name = current_database() AND schema_name = 'main'"
+            ).fetchall()
+        }
+        if "events" not in tables:
+            raise DatabaseError(
+                f"{db_path} is not a ctinv database (it has no events table); "
+                "create one with ctinv ingest"
+            )
+        if read_only:
+            missing = [t for t in TABLES if t not in tables]
+            columns = {
+                row[0]
+                for row in con.execute(
+                    "SELECT column_name FROM duckdb_columns() WHERE database_name = "
+                    "current_database() AND table_name = 'rule_runs'"
+                ).fetchall()
+            }
+            if missing or "overrides" not in columns:
+                raise DatabaseError(
+                    f"{db_path} was created by an older version of ctinv; "
+                    "run ctinv detect on it once to update it"
+                )
+            return
     con.execute(create_table_sql("events", EVENT_COLUMNS, primary_key="event_id"))
     con.execute(create_table_sql("quarantine", QUARANTINE_COLUMNS))
     con.execute(INGESTED_FILES_DDL)
     con.execute(FINDINGS_DDL)
     con.execute(RULE_RUNS_DDL)
     con.execute(RULE_RUNS_MIGRATION)
-    return con

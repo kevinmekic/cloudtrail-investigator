@@ -27,7 +27,7 @@ Each run writes `<kind>-<UTC time>.md`, `.html` and `.json` (for example
 `findings`, and prints the executive summary. `reports/` is git-ignored: reports
 contain the data they describe. Usage errors exit with status 2, an unknown
 starting point or a database without detection results (for `--findings`) with
-1.
+1. The database is opened read-only.
 
 ## Sections
 

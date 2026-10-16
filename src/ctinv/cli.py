@@ -32,6 +32,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _fail(console, message: object, status: int = 2) -> int:
+    """Print an error (escaped: paths and messages may contain markup) and return the status."""
+    from rich.markup import escape
+
+    console.print(f"[red]error:[/red] {escape(str(message))}", highlight=False)
+    return status
+
+
+def _cannot_write(console, path: Path, exc: OSError) -> int:
+    return _fail(console, f"cannot write {path}: {exc.strerror or exc}")
+
+
 def _configure_ingest(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("paths", nargs="+", type=Path, metavar="PATH", help="files or directories")
     sub.add_argument(
@@ -61,13 +73,13 @@ def _run_ingest(args: argparse.Namespace) -> int:
     from rich.table import Table
 
     from ctinv.ingest import DatasetResolutionError, FileResult, ingest, plan_files
+    from ctinv.schema import DatabaseError
 
     err = Console(stderr=True)
     try:
         plans = plan_files(args.paths, args.data_dir, args.dataset)
     except (DatasetResolutionError, FileNotFoundError) as exc:
-        err.print(f"[red]error:[/red] {exc}", highlight=False)
-        return 2
+        return _fail(err, exc)
 
     out = Console()
 
@@ -81,9 +93,12 @@ def _run_ingest(args: argparse.Namespace) -> int:
             highlight=False,
         )
 
-    stats = ingest(
-        args.db, plans, batch_size=args.batch_size, memory_limit=args.memory_limit, on_file=show
-    )
+    try:
+        stats = ingest(
+            args.db, plans, batch_size=args.batch_size, memory_limit=args.memory_limit, on_file=show
+        )
+    except DatabaseError as exc:
+        return _fail(err, exc)
     table = Table(title=f"Ingest into {args.db}", title_justify="left")
     for column in (
         "files",
@@ -130,39 +145,43 @@ def _configure_detect(sub: argparse.ArgumentParser) -> None:
 
 def _run_detect(args: argparse.Namespace) -> int:
     from rich.console import Console
+    from rich.markup import escape
     from rich.table import Table
 
     from ctinv.detect import RuleError, apply_overrides, load_rules, run_rules
-    from ctinv.schema import connect
+    from ctinv.schema import DatabaseError, connect
 
     err = Console(stderr=True)
-    if not args.db.exists():
-        err.print(f"[red]error:[/red] database {args.db} not found; run ctinv ingest first")
-        return 2
     try:
         rules = load_rules(args.rules_dir)
     except RuleError as exc:
-        err.print(f"[red]error:[/red] {exc}", highlight=False)
-        return 2
+        return _fail(err, exc)
+    except OSError as exc:
+        return _fail(err, f"cannot read rules from {args.rules_dir}: {exc.strerror or exc}")
     if args.rule:
         unknown = sorted(set(args.rule) - {r.id for r in rules})
         if unknown:
-            err.print(f"[red]error:[/red] unknown rule(s): {', '.join(unknown)}")
-            return 2
+            return _fail(err, f"unknown rule(s): {', '.join(unknown)}")
         rules = [r for r in rules if r.id in set(args.rule)]
     rule_defaults = {r.id: r.parameters for r in rules}
     try:
         rules = apply_overrides(rules, args.set)
     except RuleError as exc:
-        err.print(f"[red]error:[/red] {exc}", highlight=False)
-        return 2
+        return _fail(err, exc)
 
-    con = connect(args.db)
     try:
+        con = connect(args.db, create=False)
+    except DatabaseError as exc:
+        return _fail(err, exc)
+    try:
+        if not con.execute("SELECT count(*) FROM events").fetchone()[0]:
+            err.print(
+                f"note: {escape(str(args.db))} holds no events, so there is nothing to detect",
+                highlight=False,
+            )
         results = run_rules(con, rules)
     except RuleError as exc:
-        err.print(f"[red]error:[/red] {exc}", highlight=False)
-        return 1
+        return _fail(err, exc, 1)
     finally:
         con.close()
 
@@ -294,31 +313,32 @@ def _run_investigate(args: argparse.Namespace) -> int:
     from rich.console import Console
 
     from ctinv.investigate import InvestigationError, investigate, write_json
-    from ctinv.schema import connect
+    from ctinv.schema import DatabaseError, connect
     from ctinv.summary import print_investigation
 
     err = Console(stderr=True)
-    if not args.db.exists():
-        err.print(f"[red]error:[/red] database {args.db} not found; run ctinv ingest first")
-        return 2
     try:
         scope = _scope(args)
     except InvestigationError as exc:
-        err.print(f"[red]error:[/red] {exc}", highlight=False)
-        return 2
-    con = connect(args.db)
+        return _fail(err, exc)
+    try:
+        con = connect(args.db, create=False, read_only=True)
+    except DatabaseError as exc:
+        return _fail(err, exc)
     try:
         inv = investigate(con, scope)
     except InvestigationError as exc:
-        err.print(f"[red]error:[/red] {exc}", highlight=False)
-        return 1
+        return _fail(err, exc, 1)
     finally:
         con.close()
 
     out = Console()
     print_investigation(out, inv, str(args.db))
     if args.output:
-        write_json(inv, args.output, str(args.db))
+        try:
+            write_json(inv, args.output, str(args.db))
+        except OSError as exc:
+            return _cannot_write(err, args.output, exc)
         out.print(f"\nInvestigation written to {args.output}", highlight=False)
     return 0
 
@@ -383,43 +403,39 @@ def _run_report(args: argparse.Namespace) -> int:
         investigation_report,
         write_report,
     )
-    from ctinv.schema import connect
+    from ctinv.schema import DatabaseError, connect
 
     err = Console(stderr=True)
-    if not args.db.exists():
-        err.print(f"[red]error:[/red] database {args.db} not found; run ctinv ingest first")
-        return 2
     if args.rule and not args.findings:
-        err.print("[red]error:[/red] --rule needs --findings")
-        return 2
+        return _fail(err, "--rule needs --findings")
     limits = Limits(periods=args.max_rows)
     try:
         scope = None if args.findings else _scope(args)
     except InvestigationError as exc:
-        err.print(f"[red]error:[/red] {exc}", highlight=False)
-        return 2
-    con = connect(args.db)
+        return _fail(err, exc)
+    try:
+        con = connect(args.db, create=False, read_only=True)
+    except DatabaseError as exc:
+        return _fail(err, exc)
     try:
         ran = {row[0] for row in con.execute("SELECT DISTINCT rule_id FROM rule_runs").fetchall()}
         unknown = sorted(set(args.rule or []) - ran)
         if unknown:
-            err.print(
-                f"[red]error:[/red] no detection run for rule(s): {', '.join(unknown)}",
-                highlight=False,
-            )
-            return 2
+            return _fail(err, f"no detection run for rule(s): {', '.join(unknown)}")
         if scope is None:
             report = findings_report(con, str(args.db), args.rule, args.start, args.end, limits)
         else:
             inv = investigate(con, scope)
             report = investigation_report(con, inv, str(args.db), limits, args.period_gap)
     except (InvestigationError, ReportError) as exc:
-        err.print(f"[red]error:[/red] {exc}", highlight=False)
-        return 1
+        return _fail(err, exc, 1)
     finally:
         con.close()
 
-    paths = write_report(report, args.out_dir, args.redact)
+    try:
+        paths = write_report(report, args.out_dir, args.redact)
+    except OSError as exc:
+        return _cannot_write(err, args.out_dir, exc)
     out = Console()
     out.print(f"[bold]{escape(report.model['title'])}[/bold]")
     out.print("[bold]Executive summary[/bold]")
@@ -513,16 +529,12 @@ def _run_evaluate(args: argparse.Namespace) -> int:
     from ctinv import evaluate as ev
     from ctinv.detect import load_rules
     from ctinv.investigate import dump_json
-    from ctinv.schema import connect
+    from ctinv.schema import DatabaseError, connect
 
     err, out = Console(stderr=True), Console()
     wants_review = args.only in (None, "review") and args.db is not None
     if (args.init_review or args.only == "review") and args.db is None:
-        err.print("[red]error:[/red] --init-review and --only review need --db")
-        return 2
-    if args.db is not None and not args.db.exists():
-        err.print(f"[red]error:[/red] database {args.db} not found; run ctinv ingest first")
-        return 2
+        return _fail(err, "--init-review and --only review need --db")
 
     # The evaluation always uses the built-in rules with their default parameters.
     rules = load_rules()
@@ -530,13 +542,16 @@ def _run_evaluate(args: argparse.Namespace) -> int:
     sheet = None
     try:
         if wants_review or args.init_review:
-            con = connect(args.db)
+            con = connect(args.db, create=False, read_only=True)
             try:
                 sample = ev.draw_sample(
                     con, rules, args.review_dataset, args.sample_size, args.seed
                 )
                 if args.init_review:
-                    ev.write_review_file(args.review_file, sample)
+                    try:
+                        ev.write_review_file(args.review_file, sample)
+                    except OSError as exc:
+                        return _cannot_write(err, args.review_file, exc)
                     out.print(
                         f"Review file written: {args.review_file} "
                         f"({len(sample['findings'])} findings, labels empty)",
@@ -565,18 +580,20 @@ def _run_evaluate(args: argparse.Namespace) -> int:
             result["development_set"] = ev.evaluate_development(
                 args.data_dir, args.labels_dir, rules
             )
-    except ev.EvaluationError as exc:
-        err.print(f"[red]error:[/red] {exc}", highlight=False)
-        return 2
+    except (ev.EvaluationError, DatabaseError) as exc:
+        return _fail(err, exc)
 
-    args.out_dir.mkdir(parents=True, exist_ok=True)
-    stem = ev.output_stem(args.out_dir, datetime.fromisoformat(result["generated_at"]))
-    paths = [stem.with_suffix(".md"), stem.with_suffix(".json")]
-    paths[0].write_text(ev.render_markdown(result), encoding="utf-8")
-    dump_json(result, paths[1])
-    if sheet is not None:
-        paths.append(stem.parent / f"{stem.name}-review-sheet.md")
-        paths[2].write_text(sheet, encoding="utf-8")
+    try:
+        args.out_dir.mkdir(parents=True, exist_ok=True)
+        stem = ev.output_stem(args.out_dir, datetime.fromisoformat(result["generated_at"]))
+        paths = [stem.with_suffix(".md"), stem.with_suffix(".json")]
+        paths[0].write_text(ev.render_markdown(result), encoding="utf-8")
+        dump_json(result, paths[1])
+        if sheet is not None:
+            paths.append(stem.parent / f"{stem.name}-review-sheet.md")
+            paths[2].write_text(sheet, encoding="utf-8")
+    except OSError as exc:
+        return _cannot_write(err, args.out_dir, exc)
     ev.print_result(out, result)
     out.print("\nEvaluation written to " + ", ".join(str(p) for p in paths), highlight=False)
     return 0

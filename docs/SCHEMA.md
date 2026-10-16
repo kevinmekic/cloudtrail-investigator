@@ -41,6 +41,18 @@ ctinv ingest some/other/logs --db x.duckdb --dataset my-sandbox # dataset given 
 - **One transaction per file**, so a crash never leaves a half-ingested file.
   `records_read = inserted + duplicates + quarantined` holds for every file.
 
+## Opening a database
+
+`ctinv ingest` creates the database file and its tables. Every other command
+needs a database made by ingest: it refuses a missing file and a DuckDB file
+without an `events` table, and never adds tables to one. `investigate`,
+`report` and `evaluate --db` open the database read-only; `detect` writes only
+`findings` and `rule_runs`. `--db` must be a DuckDB file: DuckDB opens a data
+file such as `events.json` or `events.parquet` as an in-memory database with a
+view on that file, so everything written would be lost when the command ends,
+and ctinv refuses such a path. These errors, like other usage errors, print one
+line and exit with status 2.
+
 ## Time
 
 `event_time` is a `TIMESTAMP` holding **UTC**. Python converts `eventTime`

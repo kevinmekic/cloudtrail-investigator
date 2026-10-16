@@ -23,8 +23,8 @@ ctinv investigate --db data/ctinv.duckdb --principal arn:aws:iam::811596193553:r
 
 The console shows a summary; the JSON file has everything. An unknown starting
 point (no events, or none in the time range) exits with status 1, usage errors
-with 2. The investigation works in temporary tables and does not change the
-database.
+with 2. The investigation opens the database read-only and works in temporary
+tables, so it does not change the database.
 
 ## Starting point
 
