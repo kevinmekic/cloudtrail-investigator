@@ -1,0 +1,426 @@
+# Manual review of a random sample of findings on flaws.cloud.
+#
+# flaws.cloud has no ground truth, so this is a reviewed sample, not a measured
+# false-positive rate. The sample is reproducible: per rule, the findings are
+# ordered by sha256("<seed>:<finding_id>") and the first <per_rule> are taken
+# (all of them if a rule has fewer). `ctinv evaluate --db <database>` checks
+# that the database still yields exactly these findings.
+#
+# For each finding, set `label` to one of:
+#   true-positive         the evidence shows the behaviour the rule describes, and
+#                         nothing in the logs explains it as expected activity
+#   benign-true-positive  the evidence shows that behaviour, but it is expected
+#                         activity (e.g. the account owner's administration, a
+#                         known scanner)
+#   false-positive        the evidence does not show the behaviour the rule
+#                         describes
+#   unclear               the logs do not allow a decision
+# and optionally a short `note`. The summary and context of each finding (top
+# APIs, source addresses, user agents, errors) are in the review sheet that
+# `ctinv evaluate --db <database>` writes next to its results (git-ignored).
+
+sample:
+  dataset: flaws_cloud
+  seed: ctinv-review-1
+  per_rule: 10
+  population:
+    access-denied-spike: 540
+    admin-policy-attached: 1
+    cloudtrail-tampering: 3
+    console-login-without-mfa: 1
+    credentials-created-for-other-user: 10
+    discovery-burst: 332
+    new-region-activity: 15
+    root-account-usage: 69
+    snapshot-or-image-shared: 37
+findings:
+- finding_id: 3b348966dc126788299f111b
+  rule_id: access-denied-spike
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2018-04-16 21:09:03'
+  label: null
+  note: null
+- finding_id: 2a26ea15990383a00d070a29
+  rule_id: access-denied-spike
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2020-08-03 02:22:07'
+  label: null
+  note: null
+- finding_id: 2a43cda57ee3d3bf06409e92
+  rule_id: access-denied-spike
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2018-04-18 00:29:31'
+  label: null
+  note: null
+- finding_id: 8faa04e2037a6052b1138e2b
+  rule_id: access-denied-spike
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2020-09-21 00:48:38'
+  label: null
+  note: null
+- finding_id: c07527de8546abf121f6ad8f
+  rule_id: access-denied-spike
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2019-08-23 20:04:03'
+  label: null
+  note: null
+- finding_id: 04f5b1c794c14e7b9855a122
+  rule_id: access-denied-spike
+  principal: arn:aws:sts::811596193553:assumed-role/aws:ec2-instance/i-aa2d3b42e5c6e801a
+  first_seen: '2020-06-10 23:36:15'
+  label: null
+  note: null
+- finding_id: f5ddbd32d48dfe15031f130b
+  rule_id: access-denied-spike
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2018-04-17 01:31:07'
+  label: null
+  note: null
+- finding_id: 741dfb2bce9ae31a93637103
+  rule_id: access-denied-spike
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2018-10-28 16:02:35'
+  label: null
+  note: null
+- finding_id: 0fc31ca3320f9867b92a6a93
+  rule_id: access-denied-spike
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2019-04-05 09:22:12'
+  label: null
+  note: null
+- finding_id: 2c852c7afbf2624224006ddc
+  rule_id: access-denied-spike
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2020-09-21 04:11:39'
+  label: null
+  note: null
+- finding_id: a57599d0bc1aa8d52e5e0a9c
+  rule_id: admin-policy-attached
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-05-16 03:03:56'
+  label: null
+  note: null
+- finding_id: 7fe10efb637c72431226f142
+  rule_id: cloudtrail-tampering
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2017-08-03 19:50:59'
+  label: null
+  note: null
+- finding_id: b7c20040c01e85be44a5ffb8
+  rule_id: cloudtrail-tampering
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2019-08-23 15:48:50'
+  label: null
+  note: null
+- finding_id: c782f1341a3580c27e52bcec
+  rule_id: cloudtrail-tampering
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2019-06-07 11:04:25'
+  label: null
+  note: null
+- finding_id: 8fcacc014c0f47e1b7b8a463
+  rule_id: console-login-without-mfa
+  principal: arn:aws:iam::811596193553:user/piper
+  first_seen: '2017-05-16 23:05:01'
+  label: null
+  note: null
+- finding_id: 623a4284547eef08466cfa61
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-02-19 20:04:20'
+  label: null
+  note: null
+- finding_id: 96bd92edca4d80c39c76539c
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-05-26 22:23:54'
+  label: null
+  note: null
+- finding_id: 805a778eb3b7ac088028314d
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-02-20 01:29:24'
+  label: null
+  note: null
+- finding_id: 5e498342015dfdb16fb2bb4f
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-02-12 20:58:27'
+  label: null
+  note: null
+- finding_id: b147ad092ba710729b1909e2
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2018-07-05 20:15:12'
+  label: null
+  note: null
+- finding_id: 7c2bd1974e578c4682101f27
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-05-16 03:03:57'
+  label: null
+  note: null
+- finding_id: 233996084794daf58fc84c8d
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:user/piper
+  first_seen: '2017-09-17 15:06:42'
+  label: null
+  note: null
+- finding_id: 871285dda6f5c07c380d16f1
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-02-26 23:11:17'
+  label: null
+  note: null
+- finding_id: a96a11403512b7a207433e6f
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-05-16 03:03:57'
+  label: null
+  note: null
+- finding_id: 94462a1448813c41461d11d8
+  rule_id: credentials-created-for-other-user
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2018-10-02 16:22:36'
+  label: null
+  note: null
+- finding_id: 5010f44d87ccf791a9fc2e5e
+  rule_id: discovery-burst
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2019-07-08 15:43:23'
+  label: null
+  note: null
+- finding_id: 2e01133bdd31fde0af529308
+  rule_id: discovery-burst
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-02-20 01:43:30'
+  label: null
+  note: null
+- finding_id: 0905eb2dd27010cb2bdfb4ab
+  rule_id: discovery-burst
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2018-12-19 22:17:16'
+  label: null
+  note: null
+- finding_id: fa12a2a03c81817e4e27e946
+  rule_id: discovery-burst
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2019-12-16 10:19:48'
+  label: null
+  note: null
+- finding_id: 8202fc988ca8f564f66ba6c8
+  rule_id: discovery-burst
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2019-06-06 11:26:57'
+  label: null
+  note: null
+- finding_id: 59ceb45baa0c6b24ace2cff2
+  rule_id: discovery-burst
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2020-04-11 02:00:10'
+  label: null
+  note: null
+- finding_id: 2ec93ab9c61d5a5d2cbb7ea2
+  rule_id: discovery-burst
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-07-11 02:32:34'
+  label: null
+  note: null
+- finding_id: 64e92b0373f50d9c4c3be0d9
+  rule_id: discovery-burst
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2020-10-07 08:08:20'
+  label: null
+  note: null
+- finding_id: 06f5e4b60fbd067ec782d8e4
+  rule_id: discovery-burst
+  principal: arn:aws:sts::811596193553:assumed-role/SecurityMonkey/secmonkey
+  first_seen: '2017-05-27 01:59:39'
+  label: null
+  note: null
+- finding_id: edc0a6d5ced9535518465300
+  rule_id: discovery-burst
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2020-08-29 14:44:23'
+  label: null
+  note: null
+- finding_id: e8a7e10f6cc9711584da9cdc
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2018-04-16 06:59:22'
+  label: null
+  note: null
+- finding_id: acfe5ff02b57b05df3f58497
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:user/Level6
+  first_seen: '2018-08-11 17:40:30'
+  label: null
+  note: null
+- finding_id: b7b5386c34cee2d1b6d11758
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2019-09-30 07:05:51'
+  label: null
+  note: null
+- finding_id: 4f53f35803b09fd508361808
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2018-08-05 16:51:14'
+  label: null
+  note: null
+- finding_id: c6052d36defc73114c97a386
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2017-12-14 15:55:47'
+  label: null
+  note: null
+- finding_id: 01afa1cc4e8eae1ed0d2e916
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2017-02-28 13:40:38'
+  label: null
+  note: null
+- finding_id: d7c666a0c3783f929d88b217
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2017-09-12 09:43:05'
+  label: null
+  note: null
+- finding_id: aa7500d64503fad0674676f6
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:role/flaws
+  first_seen: '2019-08-11 06:32:23'
+  label: null
+  note: null
+- finding_id: b64a852f90dc1f3f9613e5a5
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2017-03-10 21:14:56'
+  label: null
+  note: null
+- finding_id: ea130c64e81f2afa9f17afac
+  rule_id: new-region-activity
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2017-03-09 19:39:03'
+  label: null
+  note: null
+- finding_id: 8d37ea2bce834c7f38e4956c
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-07-11 02:32:32'
+  label: null
+  note: null
+- finding_id: 185fc431e032cf375df2d99c
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2018-12-02 15:35:27'
+  label: null
+  note: null
+- finding_id: 383cd6d8c1af94b87223dbe0
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-05-31 19:07:35'
+  label: null
+  note: null
+- finding_id: 638873002a5012a6bc756b72
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-03-27 02:15:34'
+  label: null
+  note: null
+- finding_id: 23577446420df0d68d5436d5
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-03-25 20:57:27'
+  label: null
+  note: null
+- finding_id: 17ab813217cc8eb101e6c69c
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-02-21 04:35:07'
+  label: null
+  note: null
+- finding_id: 5be3f353199cf3c8d5c77021
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2018-09-30 23:46:06'
+  label: null
+  note: null
+- finding_id: 8efccbbf144501eebf610b95
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2018-10-03 01:59:40'
+  label: null
+  note: null
+- finding_id: e9cdec2a5d4d9fb0d9a60225
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-02-27 00:00:01'
+  label: null
+  note: null
+- finding_id: 116bfe20f0f1ba3fd914fc35
+  rule_id: root-account-usage
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-05-26 16:12:49'
+  label: null
+  note: null
+- finding_id: bced0eba886138e1ddee92fe
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2018-01-23 09:39:22'
+  label: null
+  note: null
+- finding_id: 917f5ccb5cba9648e5392684
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2019-02-16 18:05:51'
+  label: null
+  note: null
+- finding_id: c8e096619346dfe77d3abacc
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2017-08-01 23:45:35'
+  label: null
+  note: null
+- finding_id: 5cccf0a7e3ec58f73a39d064
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:root
+  first_seen: '2017-02-12 23:48:35'
+  label: null
+  note: null
+- finding_id: 72819761523b68c19ebc99af
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2019-11-20 03:19:50'
+  label: null
+  note: null
+- finding_id: 6d3ead4a8670976bdc1b7031
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2018-08-17 19:38:37'
+  label: null
+  note: null
+- finding_id: 9b7df8cfb723fc2bda311593
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2019-11-20 03:21:29'
+  label: null
+  note: null
+- finding_id: 139446ce9b8d2cdc8696bf92
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2018-03-29 02:44:53'
+  label: null
+  note: null
+- finding_id: ef31ac5a140a230c6b2fd33d
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2019-11-20 03:59:39'
+  label: null
+  note: null
+- finding_id: 1c7c99d55f5ef42fa5c01066
+  rule_id: snapshot-or-image-shared
+  principal: arn:aws:iam::811596193553:user/backup
+  first_seen: '2019-09-03 12:28:10'
+  label: null
+  note: null
