@@ -525,6 +525,10 @@ sample is the same 65 findings with the same decisions.
 
 Run: `results/evaluation-20261016T211129Z.*`, 33 s, peak memory 0.33 GB.
 
+Later changes to `schema.py` and `ingest.py` (how a database is opened, and how
+ingest reports quarantined records) change no finding: a run after them gave
+the same findings, outcomes and rates.
+
 ## Limitations
 
 - **The choice of rules was not blind to the test set's techniques.** Splunk's
