@@ -6,6 +6,8 @@ build-backend = "hatchling.build"
 name = "ctinv"
 dynamic = ["version"]
 description = "CloudTrail Investigator: offline forensic analysis of AWS CloudTrail logs (learning project)"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "Kevin Mekic" }]
 dependencies = [
