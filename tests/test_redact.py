@@ -23,10 +23,17 @@ def test_same_value_same_mask_everywhere() -> None:
 
 
 def test_event_ids_stay_intact() -> None:
-    # A UUID whose last group happens to be 12 digits is evidence, not an account.
-    event_id = "00000000-0000-0000-0000-000000000042"
-    upper = "8B8484EC-49AD-4EC1-8CCB-123456789012"
-    assert Redactor().text(f"{event_id} {upper}") == f"{event_id} {upper}"
+    # A UUID whose last group happens to be 12 digits is evidence, not an account;
+    # so are the UUID-like eventIDs of flaws.cloud with shorter or longer outer groups.
+    ids = (
+        "00000000-0000-0000-0000-000000000042",
+        "8B8484EC-49AD-4EC1-8CCB-123456789012",
+        "84129e-a3f6-4369-8dc9-123456789012",
+        "285250a71-eada-41ec-b4db-1234567890123",
+    )
+    assert Redactor().text(" ".join(ids)) == " ".join(ids)
+    # Not an eventID: the account ID next to it is still masked.
+    assert Redactor().text(f"{ACCOUNT_A}-a-b-c-d") == "ACCOUNT-1-a-b-c-d"
 
 
 def test_only_exact_formats_are_masked() -> None:

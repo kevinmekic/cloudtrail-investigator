@@ -9,17 +9,21 @@ stable across reports and cannot be reversed.
 
 Matching is deliberately broad: any run of exactly 12 digits counts as an
 account ID (CloudTrail puts account IDs into ARNs, principal IDs, bucket names
-and messages), except inside UUIDs such as eventIDs, which stay intact as
-evidence. Access key IDs are tokens of upper-case letters and digits starting
-with AKIA, ASIA, ABIA or ACCA. Names, IP addresses, user agents and IAM unique
-IDs (AIDA..., AROA...) are not masked.
+and messages), except inside eventIDs, which stay intact as evidence. An
+eventID is a UUID, or UUID-like: five groups of hex digits whose middle three
+have four digits each (302,189 flaws.cloud eventIDs have shorter or longer
+outer groups, and 4,376 of them contain a run of 12 digits). Access key IDs
+are tokens of upper-case letters and digits starting with AKIA, ASIA, ABIA or
+ACCA. Names, IP addresses, user agents and IAM unique IDs (AIDA..., AROA...)
+are not masked.
 """
 
 import re
 from typing import Any
 
 _TOKEN = re.compile(
-    r"(?P<uuid>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
+    r"(?P<uuid>(?<![0-9A-Za-z])[0-9a-fA-F]{1,16}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{1,16}"
+    r"(?![0-9A-Za-z]))"
     r"|(?P<key>(?<![A-Z0-9])(?:AKIA|ASIA|ABIA|ACCA)[A-Z0-9]{12,124}(?![A-Z0-9]))"
     r"|(?P<account>(?<![0-9])[0-9]{12}(?![0-9]))"
 )
