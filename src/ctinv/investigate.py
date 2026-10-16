@@ -134,12 +134,12 @@ CALLER_SQL = (
     "coalesce(e.identity_arn, e.invoked_by, "
     "e.identity_account_id || ':' || e.identity_principal_id, e.identity_type)"
 )
-_ISSUED_KEY_SQL = (
+ISSUED_KEY_SQL = (
     "CASE WHEN e.event_source = 'iam.amazonaws.com' "
     "THEN e.response_elements->>'$.accessKey.accessKeyId' "
     "ELSE e.response_elements->>'$.credentials.accessKeyId' END"
 )
-_ISSUING_SQL = (
+ISSUING_SQL = (
     "((e.event_source = 'sts.amazonaws.com' AND (e.event_name IN ("
     + ", ".join(f"'{name}'" for name in ISSUING_STS_CALLS)
     + ") OR (e.response_elements->'$.credentials.accessKeyId') IS NOT NULL))"
@@ -348,9 +348,9 @@ def _pivots_at(con: duckdb.DuckDBPyConnection, depth: int) -> list[Pivot]:
         SELECT e.event_id, e.event_time, i.session,
                replace(e.event_source, '.amazonaws.com', '') || ':' || e.event_name,
                {CALLER_SQL}, {_TARGET_SQL}, e.request_parameters->>'roleSessionName',
-               {OUTCOME_SQL}, e.error_code, {_ISSUED_KEY_SQL}, {_ISSUED_IDENTITY_SQL}
+               {OUTCOME_SQL}, e.error_code, {ISSUED_KEY_SQL}, {_ISSUED_IDENTITY_SQL}
         FROM inv_events i JOIN events e ON e.event_id = i.event_id
-        WHERE i.depth = $depth AND {_ISSUING_SQL}
+        WHERE i.depth = $depth AND {ISSUING_SQL}
         ORDER BY e.event_time, e.event_id
         """,
         {"depth": depth},
@@ -511,8 +511,8 @@ def _describe_sessions(con: duckdb.DuckDBPyConnection, sessions: list[Session]) 
                replace(e.event_source, '.amazonaws.com', '') || ':' || e.event_name,
                {CALLER_SQL}, e.access_key_id, {_TARGET_SQL},
                e.request_parameters->>'roleSessionName', e.source_ip_address
-        FROM events e JOIN inv_keys k ON k.key = {_ISSUED_KEY_SQL}
-        WHERE e.error_code IS NULL AND {_ISSUING_SQL}
+        FROM events e JOIN inv_keys k ON k.key = {ISSUED_KEY_SQL}
+        WHERE e.error_code IS NULL AND {ISSUING_SQL}
         ORDER BY e.event_time, e.event_id
         """
     ).fetchall():
@@ -856,11 +856,19 @@ def _json_default(value: Any) -> Any:
 
 def write_json(inv: Investigation, path: Path, database: str | None = None) -> None:
     """Write the investigation as indented JSON, with one line per timeline event."""
-    data = to_dict(inv, database)
-    timeline = data.pop("timeline")
+    dump_json(to_dict(inv, database), path)
+
+
+def dump_json(data: dict[str, Any], path: Path) -> None:
+    """Write indented JSON; a top-level ``timeline`` list goes last, one item per line."""
+    data = dict(data)
+    timeline = data.pop("timeline", None)
     head = json.dumps(data, indent=2, default=_json_default)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as out:
+        if timeline is None:
+            out.write(head + "\n")
+            return
         out.write(head[: -len("\n}")] + ',\n  "timeline": [')
         for n, event in enumerate(timeline):
             out.write(("," if n else "") + "\n    " + json.dumps(event, default=_json_default))
