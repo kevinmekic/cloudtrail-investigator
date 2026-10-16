@@ -1,0 +1,53 @@
+# What is known about each public dataset that changes how its events may be
+# read. Reports take these properties from here; nothing about a particular
+# dataset is written into the report code. Keyed by the dataset name that
+# `ctinv ingest` stores in the `dataset` column (from data/MANIFEST.json or
+# --dataset). docs/DATASETS.md describes the datasets in full.
+#
+# title:         the dataset's name as its publisher gives it
+# url:           where the publisher describes it
+# anonymised:    fields the publisher states it replaced before publishing
+#                (source_ips, account_ids, access_keys); empty if the publisher
+#                states no such thing. Reports label anonymised source IPs.
+# anonymisation: how, in the publisher's words as far as possible
+# caveats:       short statements a report lists under the limitations of the data
+
+flaws_cloud:
+  title: flaws.cloud CloudTrail logs (Summit Route, 2020)
+  url: https://summitroute.com/blog/2020/10/09/public_dataset_of_cloudtrail_logs_from_flaws_cloud/
+  anonymised: [source_ips, account_ids, access_keys]
+  anonymisation: >-
+    The publisher replaced every IP address, account ID and access key with a
+    random value of the same format before publishing (consistently, so one
+    original value always became the same replacement; tool: Latacora's
+    wernicke) and set some other identifying values to REDACTED by hand. The
+    replacement IP addresses were chosen at random and may belong to anyone.
+  caveats:
+    - Largely real attack traffic from many people playing the flaws.cloud
+      challenge between 2017 and 2020. The challenge identities (for example
+      the users Level6 and backup) are shared by all players, so the events of
+      one identity or key are usually many people's.
+    - IP addresses that really belonged to AWS look like external addresses,
+      and no address says anything about a location.
+    - Management events only; S3 and Lambda data events were not logged.
+    - No ground truth; nothing in the data is labelled.
+
+invictus_sigma_aws:
+  title: "Invictus IR Sigma-AWS: CloudTrail from Stratus Red Team simulations (2023)"
+  url: https://github.com/invictus-ir/Sigma-AWS
+  anonymised: []
+  caveats:
+    - Generated in a lab account on 2023-07-10 by running Stratus Red Team
+      attack techniques; much cleaner and denser than production logs, with
+      almost no benign activity.
+    - Most events are lab set-up and clean-up (Terraform) or AWS-internal
+      calls, not the attack techniques themselves.
+
+splunk_attack_data:
+  title: "Splunk attack_data: CloudTrail samples per ATT&CK technique"
+  url: https://github.com/splunk/attack_data
+  anonymised: []
+  caveats:
+    - Curated extracts per attack technique, mostly from Splunk's Attack Range
+      lab; most files hold only the attack's own events and no surrounding
+      benign activity.
