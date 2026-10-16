@@ -1,4 +1,4 @@
-"""Investigation of one identity: timeline, session graph and blast radius.
+"""Investigation of one identity: timeline, session graph, blast radius, findings.
 
 The starting point is an access key or a principal ARN. Its events form the
 first session of a session graph. From there the investigation follows the
@@ -16,6 +16,9 @@ The blast radius lists the resources the investigated events name, per service,
 split into succeeded, denied (permission errors) and failed (other errors).
 Resources come from the event's ``resources`` field and from request parameters
 that name a resource (``RESOURCE_PARAMETERS``).
+
+Findings of ``ctinv detect`` belong to the investigation when at least one of
+their evidence events is an event of the session graph.
 
 Bounded by design: ``max_depth`` caps how many pivots deep the graph goes,
 ``max_sessions`` caps how many sessions are followed, ``max_events`` caps how
@@ -239,6 +242,8 @@ class Investigation:
     apis: list[dict[str, Any]]
     timeline: list[dict[str, Any]]
     blast_radius: dict[str, Any]
+    # None: detection was never run on the database, so absence means nothing.
+    findings: list[dict[str, Any]] | None
 
 
 def key_kind(key: str) -> str:
@@ -329,6 +334,7 @@ def investigate(con: duckdb.DuckDBPyConnection, scope: Scope) -> Investigation:
         apis=_api_counts(con),
         timeline=_timeline(con, scope.max_events),
         blast_radius=_blast_radius(con, scope),
+        findings=_findings(con, scope),
     )
 
 
@@ -731,3 +737,57 @@ def _blast_radius(con: duckdb.DuckDBPyConnection, scope: Scope) -> dict[str, Any
             "apis": [{"api": api, "events": n} for api, n in unnamed[:10]],
         },
     }
+
+
+FINDING_FIELDS = (
+    "finding_id",
+    "rule_id",
+    "rule_title",
+    "severity",
+    "technique_id",
+    "technique_name",
+    "former_technique_ids",
+    "tactics",
+    "principal",
+    "summary",
+    "outcome",
+    "first_seen",
+    "last_seen",
+    "evidence_count",
+    "evidence_in_investigation",
+    "sessions",
+    "event_ids",
+)
+
+
+def _findings(con: duckdb.DuckDBPyConnection, scope: Scope) -> list[dict[str, Any]] | None:
+    """Findings with at least one evidence event in the investigation.
+
+    ``event_ids`` lists the first of those evidence events (``max_evidence``);
+    ``evidence_count`` is the finding's whole evidence, which may reach beyond
+    the investigated sessions and time range.
+    """
+    if not con.execute("SELECT count(*) FROM rule_runs").fetchone()[0]:
+        return None
+    rows = con.execute(
+        """
+        WITH hits AS (
+            SELECT u.finding_id, u.event_id, i.session, e.event_time
+            FROM (SELECT finding_id, unnest(evidence_event_ids) AS event_id FROM findings) u
+            JOIN inv_events i ON i.event_id = u.event_id
+            JOIN events e ON e.event_id = u.event_id
+        ), per_finding AS (
+            SELECT finding_id, count(*) AS n, list_sort(list(DISTINCT session)) AS sessions,
+                   list(event_id ORDER BY event_time, event_id)[1:$evidence] AS event_ids
+            FROM hits GROUP BY finding_id
+        )
+        SELECT f.finding_id, f.rule_id, f.rule_title, f.severity, f.technique_id,
+               f.technique_name, f.former_technique_ids, f.tactics, f.principal, f.summary,
+               f.outcome, f.first_seen, f.last_seen, f.evidence_count,
+               p.n, p.sessions, p.event_ids
+        FROM findings f JOIN per_finding p ON p.finding_id = f.finding_id
+        ORDER BY f.first_seen, f.rule_id, f.finding_id
+        """,
+        {"evidence": scope.max_evidence},
+    ).fetchall()
+    return [dict(zip(FINDING_FIELDS, row, strict=True)) for row in rows]

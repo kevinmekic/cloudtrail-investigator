@@ -1,4 +1,4 @@
-"""Tests for the investigation: session graph, pivots, timeline, limits."""
+"""Tests for the investigation: session graph, pivots, timeline, blast radius, findings."""
 
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from cloudtrail_events import ACCOUNT, aws_service, event, make_db
+from ctinv.detect import load_rules, run_rules
 from ctinv.investigate import Investigation, InvestigationError, Scope, investigate
 from ctinv.schema import connect
 
@@ -536,3 +537,31 @@ def test_blast_radius_lists_are_capped(tmp_path: Path) -> None:
     assert [r["resource"] for r in s3["listed"]] == ["b0", "b1"]
     assert s3["listed"][0]["succeeded"]["events"] == 3
     assert s3["listed"][0]["succeeded"]["event_ids"] == [eid(3), eid(6)]
+
+
+# ------------------------------------------------------------------------------------ findings
+
+
+def test_findings_of_sessions_in_the_graph(tmp_path: Path) -> None:
+    stop = {"eventSource": "cloudtrail.amazonaws.com", "eventName": "StopLogging"}
+    records = [
+        assume(1, ALICE, "B", KEY_B),
+        at(2, ROLE_B, requestParameters={"name": "main"}, **stop),
+        at(3, CAROL, requestParameters={"name": "other"}, **stop),
+    ]
+    db = make_db(tmp_path, records)
+    assert run(db, access_key=KEY_A).findings is None  # detection never ran
+
+    with connect(db) as con:
+        run_rules(con, [r for r in load_rules() if r.id == "cloudtrail-tampering"])
+    (finding,) = run(db, access_key=KEY_A).findings
+    assert finding["rule_id"] == "cloudtrail-tampering"
+    assert (finding["technique_id"], finding["former_technique_ids"]) == (
+        "T1685.002",
+        ["T1562.008"],
+    )
+    assert finding["sessions"] == [KEY_B]
+    assert finding["event_ids"] == [eid(2)]
+    assert (finding["evidence_count"], finding["evidence_in_investigation"]) == (1, 1)
+    # Detection ran, but nothing of it lies in this time range.
+    assert run(db, access_key=KEY_A, end=t(2)).findings == []
