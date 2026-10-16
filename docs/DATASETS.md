@@ -102,6 +102,13 @@ datasets, titles and source pages equal to the dataset lock file.
     trail was created, and 2019-08-23, when the original trail was deleted
     (both visible in the data): each event was delivered by both trails. Count
     unique events, as `ctinv ingest` does. Details in [`SCHEMA.md`](SCHEMA.md).
+  - **Not every eventID is a standard UUID.** 302,189 of the 1,225,784 unique
+    eventIDs have five hexadecimal groups like a UUID, but the first group has
+    5 to 9 characters and the last 6 to 14 (a UUID has 8 and 12), e.g.
+    `00546c-9afc-4117-aee2-dc99a02b2217`. Probably a side effect of the
+    anonymisation (not stated by the source). Every Invictus eventID is a
+    standard UUID. Anything that checks eventIDs, such as the report redaction,
+    which never masks them, must accept this shape.
 
 ## Invictus IR Sigma-AWS
 
@@ -179,3 +186,19 @@ datasets, titles and source pages equal to the dataset lock file.
   - **Mixed origins.** 39 of the 49 files come from Splunk's Attack Range lab; the
     rest are labelled `NA`, `custom` or `aws_ec2_test_instance` in their
     descriptors.
+  - **Reused eventIDs.** CloudTrail gives every event its own ID, but 12 files
+    repeat eventIDs. In 6 of them, records that differ share an ID: copies of a
+    record with another user name, time or policy document. All 31 sign-ins of
+    `T1110.003/aws_mulitple_failed_console_login` have one eventID, and the
+    unlabelled file has 8,100 records under 7 IDs. `ctinv ingest` keeps the first
+    record of an eventID and quarantines differing repeats, so it sees fewer
+    events than these files hold; the evaluation also runs every file with
+    unique IDs (see [`EVALUATION.md`](EVALUATION.md)).
+  - **A hand-made file, probably.** The two `CreateRole` events of
+    `T1098.003/aws_iam_role_created_with_external_trust` are dated 2026-11-11,
+    after the pinned commit of 2026-10-13, and have no `awsRegion`,
+    `eventVersion` or `userAgent`.
+  - **Data events.** 3 files contain CloudTrail data events, 2 of them nothing
+    else (`T1486/s3_file_encryption`, `T1530/aws_exfil_high_no_getobject`). The
+    detection rules cover management events, so the activity of those two files
+    is outside their scope.
