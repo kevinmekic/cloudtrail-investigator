@@ -240,11 +240,30 @@ Per rule, up to N findings (default 10; all of them if a rule has fewer) are
 drawn from a database on which `ctinv detect` ran with the built-in rules and
 default parameters (checked against `rule_runs`). The order is
 `sha256("<seed>:<finding_id>")`, which is reproducible and independent of any
-random number generator; a smaller sample is a prefix of a larger one. The
-labels (`true-positive`, `benign-true-positive`, `false-positive`, `unclear`,
-defined in the review file) are set by hand in `evaluation/fp_review.yml`, and
-`ctinv evaluate --db` refuses to summarise them if the database no longer
-yields exactly the reviewed findings.
+random number generator; a smaller sample is a prefix of a larger one.
+
+**Labels proposed by the tool author's assistant, each reviewed and decided by
+a human.** For every sampled finding, `evaluation/fp_review.yml` holds a
+proposal (`proposed_label`) with a one-line reason (`proposed_reason`) based
+only on CloudTrail events: the finding's evidence (API calls, errors, user
+agents, whether the session was MFA-authenticated) and, where it was needed,
+other events of the same identity or source address (e.g. that the address of
+a root session is used by MFA-authenticated root sessions on other days). No
+knowledge about the dataset from outside the logs is used. A finding is
+proposed as `unsure` where the evidence does not decide it, instead of
+guessing. The human decision goes into `label`, which
+the proposal never fills:
+
+| Label | Meaning |
+|---|---|
+| `true_positive` | the evidence shows the behaviour the rule describes, and nothing in the logs explains it as expected activity |
+| `benign_true_positive` | the evidence shows that behaviour, but it is expected activity (e.g. the account owner's administration, a known scanner) |
+| `false_positive` | the evidence does not show the behaviour the rule describes |
+| `unsure` | the logs do not allow a decision |
+
+`ctinv evaluate --db` reports, per rule and in total, the decided labels and how
+many decisions differ from the proposal ("proposals changed"). It refuses to
+summarise a review file whose findings the database no longer yields exactly.
 
 ## Results (2026-10-16)
 
@@ -392,8 +411,9 @@ of `admin-policy-attached` (1), `cloudtrail-tampering` (3),
 `console-login-without-mfa` (1) and `credentials-created-for-other-user` (10),
 and 10 each of `access-denied-spike` (540), `discovery-burst` (332),
 `new-region-activity` (15), `root-account-usage` (69) and
-`snapshot-or-image-shared` (37). The labels in `evaluation/fp_review.yml` are
-not set yet.
+`snapshot-or-image-shared` (37). Every finding has a proposed label and reason;
+the human decisions are not made yet. Once they are, this section reports the
+decided labels per rule and how many of the 65 proposals the reviewer changed.
 
 ## Limitations
 
