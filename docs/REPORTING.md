@@ -192,9 +192,10 @@ The investigation of [INVESTIGATION.md](INVESTIGATION.md) as a report:
 `GetSessionToken`, two denied `CreateAccessKey` calls, the first denied and
 failed bursts, 32 findings), 498 activity periods,
 39 resources, 10 source IP addresses (labelled as anonymised) and 951 cited
-events in the evidence index. Measured: 13.7 s and 0.94 GB peak memory
-including the investigation; Markdown 0.47 MB, HTML 0.73 MB, JSON 70.6 MB (the
-JSON timeline lists the first 100,000 events).
+events in the evidence index. Measured: 10.2 s and 0.93 GB peak memory
+including the investigation (an earlier run of the same report: 13.7 s);
+Markdown 0.47 MB, HTML 0.75 MB, JSON 70.6 MB (the JSON timeline lists the
+first 100,000 events).
 
 A findings report over all 1,030 findings of both development datasets
 (`--findings`) took 4.3 s and 0.46 GB.
