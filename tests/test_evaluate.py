@@ -547,7 +547,13 @@ def test_cli_evaluates_both_sets_and_writes_results(
     (md_path,) = out_dir.glob("evaluation-*.md")
     markdown = md_path.read_text()
     assert "Reused eventIDs" in markdown
-    assert "Detected: 1 / 2 in-scope ATT&CK techniques" in markdown
+    # The technique-matched rate leads, then any finding, then exclusions counted as missed.
+    lead = markdown.index("Detected by a rule mapped to the technique")
+    assert "1 / 2 in-scope ATT&CK techniques" in markdown[lead : lead + 120]
+    assert lead < markdown.index("Any finding in the scenario: 1 / 2")
+    assert markdown.index("Any finding in the scenario") < markdown.index(
+        "Excluded techniques counted as missed: 1 / 2"
+    )
     assert "T1685.002 \\(formerly T1562.008\\)" in markdown
     assert "exposed before the split" in markdown
     assert "Development set (optimistic)" in markdown

@@ -1007,24 +1007,24 @@ def render_markdown(result: dict[str, Any]) -> str:
         lines += [
             "## Test set (held out): Splunk attack_data",
             "",
-            f"**Detected: {_rate(t['detected'])} in-scope ATT&CK techniques** "
+            f"**Detected by a rule mapped to the technique (or its parent/sub-technique): "
+            f"{_rate(t['technique_matched'])} in-scope ATT&CK techniques** "
             f"({t['techniques']} labelled techniques; excluded: "
             + (", ".join(f"{n} {_cell(k)}" for k, n in sorted(t["excluded"].items())) or "none")
             + ").",
             "",
-            f"- Without the techniques exposed before the split: "
+            f"- Any finding in the scenario: {_rate(t['detected'])}",
+            f"- Excluded techniques counted as missed: {_rate(t['excluded_counted_as_missed'])}",
+            f"- Any finding, without the techniques exposed before the split: "
             f"{_rate(t['detected_excluding_exposed'])}",
-            f"- Without detections that rest only on separately reported rule parts: "
-            f"{_rate(t['detected_without_separately_reported'])}",
-            f"- By a rule mapped to the same ATT&CK technique (or its parent/sub-technique): "
-            f"{_rate(t['technique_matched'])}",
+            f"- Any finding, without detections that rest only on separately reported rule "
+            f"parts: {_rate(t['detected_without_separately_reported'])}",
             f"- Every counted scenario file of the technique detected: "
             f"{_rate(t['every_counted_file_detected'])}",
-            f"- Excluded techniques counted as missed: {_rate(t['excluded_counted_as_missed'])}",
             "",
-            "| ATT&CK v20.0 | Name | Label source | Result | Rules | Files detected "
-            "| First finding | Notes |",
-            "|---|---|---|---|---|---|---|---|",
+            "| ATT&CK v20.0 | Name | Label source | Same-technique rule | Any finding | Rules "
+            "| Files detected | First finding | Notes |",
+            "|---|---|---|---|---|---|---|---|---|",
         ]
         for row in test["techniques"]:
             notes = []
@@ -1045,6 +1045,7 @@ def render_markdown(result: dict[str, Any]) -> str:
                         _cell(row["attack"]["label"]),
                         _cell(row["attack"]["name"]),
                         _cell("; ".join(row["label_sources"])),
+                        _yes(row["technique_matched"]),
                         _cell(row["status"]),
                         _cell(", ".join(row["rules"]) or "-"),
                         f"{row['files_detected']} / {row['files_counted']}"
@@ -1236,20 +1237,21 @@ def print_result(console: Any, result: dict[str, Any]) -> None:
     if test:
         t = test["totals"]
         table = Table(
-            title=f"Test set (held out): {_rate(t['detected'])} in-scope ATT&CK techniques "
-            "detected",
+            title=f"Test set (held out): {_rate(t['technique_matched'])} in-scope ATT&CK "
+            f"techniques detected by a same-technique rule, {_rate(t['detected'])} by any "
+            f"finding, {_rate(t['excluded_counted_as_missed'])} with exclusions counted as missed",
             title_justify="left",
         )
-        for column in ("ATT&CK v20.0", "result", "rules", "files", "first finding", "note"):
+        for column in ("ATT&CK v20.0", "same rule", "any finding", "rules", "files", "note"):
             table.add_column(column)
         for row in test["techniques"]:
             note = "exposed before the split" if row["exposed_before_split"] else ""
             table.add_row(
                 escape(row["attack"]["label"]),
+                _yes(row["technique_matched"]),
                 row["status"],
                 escape(", ".join(row["rules"]) or "-"),
                 f"{row['files_detected']}/{row['files_counted']}" if row["files_counted"] else "-",
-                timing(row["first_finding"]),
                 note,
             )
         console.print(table)
