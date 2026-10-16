@@ -96,8 +96,9 @@ every finding and its complete evidence list, and the latest rule runs.
 Calls of one session to one API (event source and name) with the same outcome
 form one period as long as no gap between them exceeds 15 minutes
 (`--period-gap`). Other calls can happen in between, so periods may overlap in
-time; each row has the count, first and last time, regions, error codes, and
-its first and last event as evidence.
+time; each row has the count, first and last time, regions, errors (the error
+codes, or for failed sign-ins, which have none, the error messages), and its
+first and last event as evidence.
 
 Why periods and not runs of consecutive events: a script that loops over a few
 APIs produces runs of one to a few events. In the flaws.cloud example below,

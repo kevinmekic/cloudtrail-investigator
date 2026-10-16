@@ -10,7 +10,8 @@ description: >
   account and UTC day, with all root calls of that day as evidence, so one
   session does not turn into hundreds of findings. Calls that an AWS service
   made on the root user's behalf (userIdentity.invokedBy, for example AWS
-  Support) and AWS service events are not counted.
+  Support) and AWS service events are not counted. Failed calls and failed
+  sign-in attempts are included and counted as failed.
 rationale: >
   The root user has unrestricted access that IAM policies cannot limit, and AWS
   advises using it only for the few tasks that require it, so any root activity
@@ -30,7 +31,10 @@ query: |
   SELECT any_value(identity_arn) AS principal,
          'root used on ' || strftime(event_time::DATE, '%Y-%m-%d') || ': '
            || count(*) || ' call(s) from ' || count(DISTINCT source_ip_address)
-           || ' source address(es), ' || count(error_code) || ' failed' AS summary,
+           || ' source address(es), '
+           || count(*) FILTER (WHERE ctinv_failed(error_code, event_source, event_name,
+                                                  response_elements))
+           || ' failed' AS summary,
          list(event_id ORDER BY event_time, event_id) AS evidence_event_ids
   FROM events
   WHERE identity_type = 'Root'

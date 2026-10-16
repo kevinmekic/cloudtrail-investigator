@@ -124,8 +124,9 @@ PIVOT_STATUSES = {
     "request_failed": "the call returned an error, so no key was issued",
 }
 
+# A sign-in event can fail without an errorCode (macros.FAILED_SQL).
 OUTCOME_SQL = (
-    "CASE WHEN e.error_code IS NULL THEN 'succeeded' "
+    f"CASE WHEN NOT {macros.FAILED_SQL} THEN 'succeeded' "
     "WHEN ctinv_is_access_denied(e.error_code) THEN 'denied' ELSE 'failed' END"
 )
 # Who made a call, for display: the ARN, else the AWS service acting, else the
@@ -512,7 +513,7 @@ def _describe_sessions(con: duckdb.DuckDBPyConnection, sessions: list[Session]) 
                {CALLER_SQL}, e.access_key_id, {_TARGET_SQL},
                e.request_parameters->>'roleSessionName', e.source_ip_address
         FROM events e JOIN inv_keys k ON k.key = {ISSUED_KEY_SQL}
-        WHERE e.error_code IS NULL AND {ISSUING_SQL}
+        WHERE NOT {macros.FAILED_SQL} AND {ISSUING_SQL}
         ORDER BY e.event_time, e.event_id
         """
     ).fetchall():
@@ -801,11 +802,13 @@ FORMAT = "ctinv-investigation/1"
 DEFINITIONS = {
     "times": "UTC; the time range includes its start and excludes its end",
     "outcomes": {
-        "succeeded": "no errorCode",
+        "succeeded": "no errorCode, and for sign-in events (signin.amazonaws.com) no "
+        '"Failure" in responseElements',
         "denied": "a permission error (AccessDenied, AccessDeniedException, "
         "UnauthorizedOperation, Client.UnauthorizedOperation, AuthorizationError, "
         "NotAuthorized)",
-        "failed": "any other errorCode",
+        "failed": "any other errorCode, or a sign-in event whose responseElements report "
+        '"Failure" (failed sign-ins carry an errorMessage but no errorCode)',
     },
     "pivot_statuses": PIVOT_STATUSES,
     "event_ids": "evidence lists hold the first eventIDs by time, up to max_evidence; "

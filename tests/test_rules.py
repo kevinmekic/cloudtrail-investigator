@@ -147,6 +147,30 @@ def test_root_activity_is_grouped_per_day(tmp_path: Path) -> None:
     ]
 
 
+def test_failed_root_sign_ins_count_as_failed(tmp_path: Path) -> None:
+    failed = {"outcome": "Failure", "errorMessage": "Failed authentication"}
+    records = [
+        sign_in(root, 1, "No", **failed),
+        root(
+            2,
+            eventSource="signin.amazonaws.com",
+            eventName="CheckMfa",
+            eventType="AwsConsoleSignIn",
+            responseElements={"CheckMfa": "Failure"},
+        ),
+        sign_in(root, 3, "No", eventTime="2023-01-02T00:00:00Z", **failed),
+        sign_in(root, 4, "Yes", eventTime="2023-01-02T00:01:00Z"),
+    ]
+    found = detect(tmp_path, records, "root-account-usage")
+    assert [(f[1], f[3]) for f in found] == [
+        ("root used on 2023-01-01: 2 call(s) from 1 source address(es), 2 failed", "failed"),
+        (
+            "root used on 2023-01-02: 2 call(s) from 1 source address(es), 1 failed",
+            "partly failed",
+        ),
+    ]
+
+
 def test_root_calls_made_by_aws_services_are_not_counted(tmp_path: Path) -> None:
     on_behalf = root(1)
     on_behalf["userIdentity"]["invokedBy"] = "support.amazonaws.com"

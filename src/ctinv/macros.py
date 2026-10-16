@@ -78,7 +78,25 @@ MACROS: dict[str, str] = {
                                     'AuthorizationError', 'NotAuthorized'), false)
         )
     """,
+    # True if the call failed: it has an errorCode, or it is an AWS sign-in event
+    # (signin.amazonaws.com: ConsoleLogin, CheckMfa, GetSigninToken, ...) whose
+    # responseElements report "Failure" under the event's own name. Sign-in events
+    # record a failure that way, with an errorMessage but without an errorCode
+    # (AWS CloudTrail and IAM documentation of sign-in events).
+    "ctinv_failed": """
+        CREATE OR REPLACE TEMP MACRO ctinv_failed(
+            error_code, event_source, event_name, response_elements
+        ) AS (
+            error_code IS NOT NULL
+            OR coalesce(event_source = 'signin.amazonaws.com'
+                        AND json_extract_string(response_elements, event_name) = 'Failure',
+                        false)
+        )
+    """,
 }
+
+# ctinv_failed applied to an events table aliased as ``e``.
+FAILED_SQL = "ctinv_failed(e.error_code, e.event_source, e.event_name, e.response_elements)"
 
 
 def register(con: duckdb.DuckDBPyConnection) -> None:

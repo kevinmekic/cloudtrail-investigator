@@ -145,7 +145,9 @@ def _print_timeline(console: Console, inv: Investigation, labels: dict[str, str]
         table.add_column(column, no_wrap=column in ("time", "eventID"))
     for event in inv.timeline[:SHOW_EVENTS]:
         outcome = event["outcome"]
-        result = outcome if outcome == "succeeded" else f"{outcome}: {event['error_code']}"
+        # A failed sign-in has no errorCode, only an errorMessage.
+        reason = event["error_code"] or event["error_message"]
+        result = f"{outcome}: {reason}" if outcome != "succeeded" and reason else outcome
         table.add_row(
             _time(event["event_time"]),
             labels[event["session"]],

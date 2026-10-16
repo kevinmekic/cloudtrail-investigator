@@ -64,8 +64,10 @@ The query returns one row per finding with exactly three columns: `principal`
 (who the finding is about, may be NULL), `summary` (one line) and
 `evidence_event_ids` (the eventIDs it is derived from). The framework derives
 the rest from the evidence events: `first_seen`, `last_seen`, the `outcome`
-(`succeeded`, `failed` if every evidence event has an error code, otherwise
-`partly failed`), the `datasets`, and a `finding_id` that stays the same as
+(`succeeded`, `failed` if every evidence event failed, otherwise `partly
+failed`; an event failed (macro `ctinv_failed`) if it has an error code, or if it is a sign-in event
+whose `responseElements` report `Failure`, since failed sign-ins carry no
+error code), the `datasets`, and a `finding_id` that stays the same as
 long as rule and evidence do.
 
 **A finding without evidence cannot exist.** The framework rejects a rule run

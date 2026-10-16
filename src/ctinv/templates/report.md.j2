@@ -44,7 +44,7 @@ None.
 
 Calls of one session to one API with the same outcome form one period while no gap between them exceeds {{ r.periods.gap_seconds | duration }} (--period-gap). Other calls can happen in between, so periods may overlap in time{{ cut(r.periods, "periods, in time order") }}.
 
-| First – last | Session | API | Outcome | Events | Regions | Error codes | Evidence (first, last) |
+| First – last | Session | API | Outcome | Events | Regions | Errors | Evidence (first, last) |
 |---|---|---|---|---:|---|---|---|
 {% for p in r.periods.rows %}
 | {{ p.first_seen | span(p.last_seen) }} | {{ p.session }} | {{ p.api }} | {{ p.outcome }} | {{ p.events | num }} | {{ p.regions | some(5) }} | {{ p.error_codes | map(attribute="code") | list | some(3) }} | {{ p.evidence | join(", ") }} |

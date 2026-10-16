@@ -150,6 +150,20 @@ def test_a_finding_spans_its_evidence_and_reports_mixed_outcomes(tmp_path: Path)
     )
 
 
+def test_failed_sign_ins_count_as_failed(tmp_path: Path) -> None:
+    # Sign-in events record a failure in responseElements, not in errorCode.
+    sign_in = {"eventSource": "signin.amazonaws.com", "eventName": "ConsoleLogin"}
+    db = make_db(
+        tmp_path,
+        [
+            iam_user(1, **sign_in, responseElements={"ConsoleLogin": "Failure"}),
+            iam_user(2, **sign_in, responseElements={"ConsoleLogin": "Success"}),
+        ],
+    )
+    (result,) = run(db, rule())
+    assert result.outcomes == {"failed": 1, "succeeded": 1}
+
+
 def test_rerun_replaces_findings_with_identical_ids(tmp_path: Path) -> None:
     db = make_db(tmp_path, [iam_user(1), root(2)])
     run(db, rule())
@@ -409,6 +423,26 @@ def test_is_list_describe_get(name: str | None, expected: bool) -> None:
 )
 def test_is_access_denied(code: str | None, expected: bool) -> None:
     assert macro("ctinv_is_access_denied(?::VARCHAR)", code) is expected
+
+
+@pytest.mark.parametrize(
+    ("call", "expected"),
+    [
+        (("AccessDenied", "iam.amazonaws.com", "ListUsers", None), True),
+        (("NoSuchBucket", "s3.amazonaws.com", "GetBucketAcl", None), True),
+        ((None, "iam.amazonaws.com", "ListUsers", None), False),
+        ((None, "signin.amazonaws.com", "ConsoleLogin", '{"ConsoleLogin": "Failure"}'), True),
+        ((None, "signin.amazonaws.com", "CheckMfa", '{"CheckMfa": "Failure"}'), True),
+        ((None, "signin.amazonaws.com", "ConsoleLogin", '{"ConsoleLogin": "Success"}'), False),
+        ((None, "signin.amazonaws.com", "ConsoleLogin", None), False),
+        # Only the event's own result counts, and only for sign-in events.
+        ((None, "signin.amazonaws.com", "CheckMfa", '{"ConsoleLogin": "Failure"}'), False),
+        ((None, "iam.amazonaws.com", "ConsoleLogin", '{"ConsoleLogin": "Failure"}'), False),
+    ],
+)
+def test_failed(call: tuple, expected: bool) -> None:
+    sql = "ctinv_failed(?::VARCHAR, ?::VARCHAR, ?::VARCHAR, ?::JSON)"
+    assert macro(sql, *call) is expected
 
 
 # --------------------------------------------------------------------------- CLI and built-in rules

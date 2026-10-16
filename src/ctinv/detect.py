@@ -329,7 +329,7 @@ def _run_rule(con: duckdb.DuckDBPyConnection, rule: Rule, detected_at: str) -> R
 
     con.execute("DELETE FROM findings WHERE rule_id = ?", [rule.id])
     con.execute(
-        """
+        f"""
         INSERT INTO findings
         SELECT substr(sha256($rule_id || '|' || array_to_string(f.evidence, ',')), 1, 24),
                $rule_id, $title, $severity, $technique_id, $technique_name,
@@ -346,7 +346,7 @@ def _run_rule(con: duckdb.DuckDBPyConnection, rule: Rule, detected_at: str) -> R
         -- list through the per-event join grows with the square of its size.
         JOIN (
             SELECT r.n, min(e.event_time) AS first_seen, max(e.event_time) AS last_seen,
-                   count(e.error_code) AS errors, count(*) AS events,
+                   count(*) FILTER (WHERE {macros.FAILED_SQL}) AS errors, count(*) AS events,
                    list_sort(list_distinct(list(e.dataset))) AS datasets
             FROM rule_evidence r
             JOIN events e ON e.event_id = r.event_id

@@ -296,6 +296,30 @@ def test_activity_periods(written: dict) -> None:
     assert periods["total"] == len(periods["rows"])
 
 
+def test_failed_sign_ins_are_failures_not_successes(tmp_path: Path) -> None:
+    # Sign-in events have no errorCode: a failure is recorded in responseElements
+    # and the reason in errorMessage.
+    sign_in = {"eventSource": "signin.amazonaws.com", "eventName": "ConsoleLogin"}
+    failed = {
+        "responseElements": {"ConsoleLogin": "Failure"},
+        "errorMessage": "Failed authentication",
+    }
+    records = [at(n, ALICE, **sign_in, **failed) for n in range(1, 13)]
+    records.append(at(30, ALICE, **sign_in, responseElements={"ConsoleLogin": "Success"}))
+    report = investigation(make_db(tmp_path, records))
+    moments = {m["kind"]: m for m in report.model["moments"]["rows"]}
+    assert moments["first success"]["evidence"] == ["00000000-0000-0000-0000-000000000030"]
+    assert moments["first failed burst"]["text"] == (
+        "First burst of failed calls: 12 within 60 seconds "
+        "(signin:ConsoleLogin 12; Failed authentication 12)"
+    )
+    (period,) = [p for p in report.model["periods"]["rows"] if p["outcome"] == "failed"]
+    assert (period["api"], period["events"]) == ("signin:ConsoleLogin", 12)
+    assert period["error_codes"] == [{"code": "Failed authentication", "events": 12}]
+    outcomes = {e["event_id"][-2:]: e["outcome"] for e in report.model["evidence"]}
+    assert (outcomes["01"], outcomes["30"]) == ("failed", "succeeded")
+
+
 def test_period_gap_option(tmp_path: Path) -> None:
     db = build(tmp_path)
 

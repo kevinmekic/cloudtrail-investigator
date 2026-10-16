@@ -85,6 +85,9 @@ FINDINGS_FORMAT = "ctinv-findings/1"
 _API = "replace(e.event_source, '.amazonaws.com', '') || ':' || e.event_name"
 _REP = "rep_events r JOIN events e ON e.event_id = r.event_id"
 _FIRST = "first(e.event_id ORDER BY e.event_time, e.event_id)"
+# The error of a failed call: its errorCode, or for a failed sign-in, which has
+# none, its errorMessage. NULL for calls that succeeded.
+_ERROR = f"CASE WHEN {macros.FAILED_SQL} THEN coalesce(e.error_code, e.error_message) END"
 _LAST = "last(e.event_id ORDER BY e.event_time, e.event_id)"
 # Order of key moments that share a second.
 _MOMENT_ORDER = (
@@ -278,7 +281,7 @@ def _limitations(
             FROM {_REP} WHERE e.access_key_id LIKE 'ASIA%' GROUP BY 1
         ), issued AS (
             SELECT DISTINCT {ISSUED_KEY_SQL} AS key FROM events e
-            WHERE e.error_code IS NULL AND {ISSUING_SQL}
+            WHERE NOT {macros.FAILED_SQL} AND {ISSUING_SQL}
               AND {ISSUED_KEY_SQL} IN (SELECT key FROM keys)
         )
         SELECT count(*), count(*) FILTER (WHERE key NOT IN (SELECT key FROM issued)),
@@ -304,7 +307,9 @@ def _limitations(
         ),
         _stmt(
             "Outcomes come from errorCode: succeeded means the API accepted the call, "
-            "denied a permission error, failed any other error."
+            "denied a permission error, failed any other error. Sign-in events have no "
+            "errorCode; a failed sign-in is recorded as Failure in responseElements and "
+            "counts as failed."
         ),
         _stmt(
             "Lists in this report are cut where marked; the JSON file written with it has "
@@ -459,8 +464,8 @@ def _activity_periods(
         con,
         f"""
         WITH o AS (
-            SELECT r.session, e.event_id, e.event_time, e.aws_region, e.error_code,
-                   {_API} AS api, {OUTCOME_SQL} AS outcome
+            SELECT r.session, e.event_id, e.event_time, e.aws_region,
+                   {_ERROR} AS error_code, {_API} AS api, {OUTCOME_SQL} AS outcome
             FROM {_REP}
         ), g AS (
             SELECT *, sum(CASE WHEN previous IS NULL
@@ -581,7 +586,7 @@ def _investigation_moments(
     first = con.execute(
         f"""
         SELECT e.event_time, r.session, {_API}, {CALLER_SQL}, e.event_id FROM {_REP}
-        WHERE e.error_code IS NULL ORDER BY e.event_time, e.event_id LIMIT 1
+        WHERE NOT {macros.FAILED_SQL} ORDER BY e.event_time, e.event_id LIMIT 1
         """
     ).fetchone()
     if first:
@@ -621,7 +626,8 @@ def _bursts(con: duckdb.DuckDBPyConnection, labels: dict[str, str]) -> list[dict
         rows = _table(
             con,
             f"""
-            SELECT e.event_id, e.event_time, r.session, {_API} AS api, e.error_code
+            SELECT e.event_id, e.event_time, r.session, {_API} AS api,
+                   {_ERROR} AS error_code
             FROM {_REP}
             WHERE {OUTCOME_SQL} = $outcome AND e.event_time >= $start
               AND e.event_time <= $start + to_seconds($seconds)

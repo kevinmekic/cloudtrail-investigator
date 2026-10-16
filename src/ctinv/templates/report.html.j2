@@ -103,7 +103,7 @@ details > summary { cursor: pointer; font-weight: 600; }
 <p>Calls of one session to one API with the same outcome form one period while no gap between them exceeds {{ r.periods.gap_seconds | duration }} (<code>--period-gap</code>). Other calls can happen in between, so periods may overlap in time.</p>
 {{ cut(r.periods, "periods (in time order)") }}
 <div class="scroll"><table>
-<thead><tr><th>First – last</th><th>Session</th><th>API</th><th>Outcome</th><th>Events</th><th>Regions</th><th>Error codes</th><th>Evidence (first, last)</th></tr></thead>
+<thead><tr><th>First – last</th><th>Session</th><th>API</th><th>Outcome</th><th>Events</th><th>Regions</th><th>Errors</th><th>Evidence (first, last)</th></tr></thead>
 <tbody>
 {% for p in r.periods.rows %}
 <tr><td class="t">{{ p.first_seen | span(p.last_seen) }}</td><td>{{ p.session }}</td><td>{{ p.api }}</td><td>{{ outcome(p.outcome) }}</td><td class="n">{{ p.events | num }}</td><td>{{ p.regions | some(5) }}</td><td>{% for c in p.error_codes[:3] %}{{ c.code }} ({{ c.events | num }}){% if not loop.last %}, {% endif %}{% endfor %}{% if p.error_codes | length > 3 %}, +{{ p.error_codes | length - 3 }} more{% endif %}</td><td>{{ ev(p.evidence) }}</td></tr>

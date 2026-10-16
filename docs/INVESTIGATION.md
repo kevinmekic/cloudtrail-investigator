@@ -130,11 +130,19 @@ Events of all sessions in time order; events in the same second are ordered by
 eventID (CloudTrail times have one-second precision, so their real order is
 unknown). Each event has the session it belongs to, its depth and an outcome:
 
-- **succeeded**: no `errorCode`;
+- **succeeded**: no `errorCode`, and for sign-in events no failure (below);
 - **denied**: a permission error (`AccessDenied`, `AccessDeniedException`,
   `UnauthorizedOperation`, `Client.UnauthorizedOperation`, `AuthorizationError`,
   `NotAuthorized`; the same list the detection rules use);
-- **failed**: any other error code (throttling, missing resources, limits).
+- **failed**: any other error code (throttling, missing resources, limits), or
+  a failed sign-in.
+
+AWS sign-in events (`signin.amazonaws.com`: `ConsoleLogin`, `CheckMfa`,
+`GetSigninToken`, ...) have no `errorCode`. They record the result under their
+own name in `responseElements` (`{"ConsoleLogin": "Failure"}`) and the reason
+in `errorMessage` (e.g. "Failed authentication"). A sign-in event whose
+`responseElements` report `Failure` counts as failed; the detection framework
+uses the same test (`ctinv_failed` in `src/ctinv/macros.py`).
 
 Counts per outcome are given for the whole investigation, per session and per
 API. The JSON timeline lists at most `--max-events` events; the counts are

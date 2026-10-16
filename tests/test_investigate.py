@@ -242,6 +242,42 @@ def test_success_and_failure_are_separated(db: Path) -> None:
     }
 
 
+def test_failed_sign_ins_count_as_failed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Sign-in events have no errorCode: a failure is recorded in responseElements.
+    sign_in = {"eventSource": "signin.amazonaws.com", "eventType": "AwsConsoleSignIn"}
+    records = [
+        at(
+            1,
+            CAROL,
+            **sign_in,
+            eventName="ConsoleLogin",
+            responseElements={"ConsoleLogin": "Failure"},
+            errorMessage="Failed authentication",
+        ),
+        at(2, CAROL, **sign_in, eventName="CheckMfa", responseElements={"CheckMfa": "Failure"}),
+        at(
+            3,
+            CAROL,
+            **sign_in,
+            eventName="ConsoleLogin",
+            responseElements={"ConsoleLogin": "Success"},
+        ),
+    ]
+    db = make_db(tmp_path, records)
+    inv = run(db, principal=CAROL["arn"])
+    assert [(e["outcome"], e["error_code"]) for e in inv.timeline] == [
+        ("failed", None),
+        ("failed", None),
+        ("succeeded", None),
+    ]
+    assert (inv.summary["succeeded"], inv.summary["denied"], inv.summary["failed"]) == (1, 0, 2)
+    monkeypatch.setenv("COLUMNS", "200")
+    assert main(["investigate", "--db", str(db), "--principal", CAROL["arn"]]) == 0
+    assert "failed: Failed authentication" in capsys.readouterr().out
+
+
 @pytest.mark.parametrize(
     ("max_depth", "sessions", "stopped"),
     [
