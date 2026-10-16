@@ -197,8 +197,8 @@ first use of both keys, the first success, the session key from
 `GetSessionToken`, two denied `CreateAccessKey` calls, the first denied and
 failed bursts, 32 findings), 498 activity periods, 39 resources, 10 source IP
 addresses and 2 access keys (labelled as anonymised, as are the account IDs)
-and 951 cited events in the evidence index. Measured: 10.2 s and 0.93 GB peak
-memory including the investigation (an earlier run of the same report: 13.7 s);
+and 951 cited events in the evidence index. Measured: 10.7 s and 0.93 GB peak
+memory including the investigation (earlier runs: 10.2 s and 13.7 s);
 Markdown 0.47 MB, HTML 0.75 MB, JSON 70.6 MB (the JSON timeline lists the first
 100,000 events).
 
