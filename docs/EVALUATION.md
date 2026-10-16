@@ -57,7 +57,9 @@ influenced by the rules' results on it:
 2. Evaluation code and this method committed, before any test-set event
    content was opened.
 3. Test-set labels reviewed against the event content, and every file's scope
-   decided, without running any rule on the test set; the review committed.
+   decided, without running any rule on the test set; the review committed,
+   together with the handling of reused eventIDs found while reading the
+   content (see below).
 4. Only then the evaluation run.
 
 **Separately reported rule parts.** Rules added or materially changed after the
@@ -159,6 +161,49 @@ those findings do not count.
 
 To show how much the exclusions matter, every test-set result also states the
 rate with every excluded technique counted as missed.
+
+### Label review of the test set
+
+Done on 2026-10-16 after the content of every scenario file was read and before
+any rule ran on the test set; every file's status, a description of its
+content and the reason for each exclusion are in
+`evaluation/splunk_label_review.yml`, and the results record that file's
+SHA-256.
+
+- 38 files in scope, 2 out of scope (S3 data events only:
+  `s3_file_encryption`, `aws_exfil_high_no_getobject`), 8 with a label that
+  does not match their content, 1 without a label.
+- At technique level, 4 of the 27 labelled techniques have no file left and are
+  marked "label ambiguous": T1087.004 (one denied `bedrock:InvokeModel`),
+  T1110.002 (an RDS master password reset), T1204 (Lambda code updated through
+  the API) and T1586.003 (sign-ins to the target's own root user, while
+  T1586.003 is about third-party accounts used as adversary infrastructure).
+  23 techniques are in scope.
+- Four ambiguous files belong to techniques that stay in scope through other
+  files (a Bedrock guardrail deletion under T1685.002, a bucket ACL change under
+  T1530, reading image scan results under T1204.003, two syntactically invalid
+  policies under T1580).
+- Debatable but plausible labels are kept as Splunk states them, with a note:
+  e.g. T1078 for creating access keys or login profiles (T1098.001 would fit
+  better), T1110.003 for many attempts against two user names (brute force
+  rather than spraying).
+
+### Reused eventIDs in the test set
+
+This was decided after the test-set content was read and before any rule ran
+on it, because the method above did not foresee it. CloudTrail gives every
+event its own ID, but 12 test files repeat eventIDs. Most repeats are identical
+records, which ingest counts as duplicates. In 6 files, records that differ
+share an eventID: variants made by copying a record and changing the user
+name, the time or a policy document. For example, all 31 sign-ins of a
+password-spraying scenario have one eventID. Ingest keeps the first record of
+an eventID and quarantines differing repeats; it never drops them silently.
+The tool therefore sees fewer events than such a file holds.
+
+The main result is the tool as it is. As a comparison, every file is also
+evaluated with each differing repeat given its own eventID
+(`<eventID>-variant-<n>`; identical repeats stay duplicates), and every
+technique whose result changes is listed.
 
 ### Exposed before the split
 

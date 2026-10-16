@@ -1,0 +1,335 @@
+# Review of the test set's technique labels (Splunk attack_data).
+#
+# Written after the detection rules were frozen (git tag rules-frozen-for-eval)
+# and after the event content of every file was read, but before any rule was
+# run on the test set. The criteria are in docs/EVALUATION.md ("Classification").
+#
+# status:
+#   in-scope         counts for its technique(s)
+#   out-of-scope     the labelled activity is recorded only as data events, needs
+#                    geolocation, or is absent from the data (reason required)
+#   label-ambiguous  the events contain no activity of the labelled technique,
+#                    judged against its ATT&CK v20.0 description (reason required)
+#   no-label         Splunk states no technique for the file
+# content: what the file contains (counts are records; a few files repeat records)
+# note: why a debatable label was kept as Splunk states it
+#
+# ATT&CK v20.0 descriptions cited below were read on attack.mitre.org (content
+# v20.0) on 2026-10-16.
+
+reviewed_on: "2026-10-16"
+rule_set_tag: rules-frozen-for-eval
+
+techniques:
+  T1201:
+    exposed_before_split: >-
+      The API call of aws_password_policy was seen in a non-CloudTrail sibling file
+      while the dataset was checked, before the development/test split existed.
+  T1204.003:
+    exposed_before_split: >-
+      The single event of aws_ecr_image_scanning was printed while the dataset was
+      checked, before the development/test split existed.
+
+files:
+  attack_techniques/T1021.008/aws_ec2_multiple_ssh_public_keys_uploaded/aws_ec2_multiple_ssh_public_keys_uploaded.json:
+    status: in-scope
+    content: 12 ec2-instance-connect:SendSSHPublicKey calls by one role session within 14 s.
+    note: >-
+      Pushing a key through EC2 Instance Connect is the cloud-native VM connection of
+      T1021.008; the SSH session itself (T1021.004) is not recorded by CloudTrail.
+
+  attack_techniques/T1078.004/aws_login_sfa/cloudtrail.json:
+    status: in-scope
+    content: Root console sign-in without MFA (ConsoleLogin Success, MFAUsed No); the second record repeats the first.
+
+  attack_techniques/T1078/assume_role_with_saml/assume_role_with_saml.json:
+    status: in-scope
+    content: 28 sts:AssumeRoleWithSAML calls by one SAML user from 8 source addresses over 3 days.
+    note: Use of a federated account; nothing in the events marks which calls are malicious.
+
+  attack_techniques/T1078/aws_create_policy_version/aws_cloudtrail_events.json:
+    status: in-scope
+    content: >-
+      3 iam:CreatePolicyVersion calls (1 NoSuchEntity); two records share an eventID
+      with different policy documents.
+    note: T1078 is Splunk's broad label; replacing a policy's permissions fits T1098 better. Kept as stated.
+
+  attack_techniques/T1078/aws_createaccesskey/aws_cloudtrail_events.json:
+    status: in-scope
+    content: >-
+      67 iam:CreateAccessKey and 8 kms:CreateKey calls by 14 identities over 9 months;
+      11 records repeat others, 4 reuse an eventID with another user name.
+    note: Creating access keys fits T1098.001 better. Kept as stated.
+
+  attack_techniques/T1078/aws_createloginprofile/aws_cloudtrail_events.json:
+    status: in-scope
+    content: >-
+      3 iam:CreateLoginProfile calls, then 34 console sign-ins (32 succeeded, MFA not
+      used) from one address.
+    note: Creating the login profile fits T1098.001; signing in with it is T1078. Kept as stated.
+
+  attack_techniques/T1078/aws_setdefaultpolicyversion/aws_cloudtrail_events.json:
+    status: in-scope
+    content: 4 iam:SetDefaultPolicyVersion calls (1 NoSuchEntity) by 2 IAM users.
+    note: Changing a policy's active version fits T1098 better. Kept as stated.
+
+  attack_techniques/T1078/aws_updateloginprofile/aws_cloudtrail_events.json:
+    status: in-scope
+    content: One iam:UpdateLoginProfile call (two identical records).
+    note: Changing another user's password fits T1098 better. Kept as stated.
+
+  attack_techniques/T1087.004/aws_invoke_model_access_denied/cloudtrail.json:
+    status: label-ambiguous
+    content: One bedrock:InvokeModel call (an embeddings model) by a role session, AccessDenied.
+    reason: >-
+      T1087.004 is getting a listing of cloud accounts; a single denied model
+      invocation lists no accounts.
+
+  attack_techniques/T1098.003/aws_iam_role_created_with_external_trust/aws_iam_role_created_with_external_trust.json:
+    status: in-scope
+    content: >-
+      2 iam:CreateRole calls whose trust policies allow another account and any
+      principal ("*"). The records lack eventVersion, eventType, eventCategory,
+      awsRegion and userAgent and are dated 2026-11-11, so they appear hand-made.
+
+  attack_techniques/T1098/aws_iam_delete_policy/aws_iam_delete_policy.json:
+    status: in-scope
+    content: >-
+      116 iam:DeletePolicy records (6 repeats; 29 NoSuchEntity, 6 DeleteConflict,
+      3 AccessDenied) by 5 identities over 8 months.
+    note: Deleting policies changes permissions, which T1098 covers. Kept as stated.
+
+  attack_techniques/T1098/aws_iam_failure_group_deletion/aws_iam_failure_group_deletion.json:
+    status: in-scope
+    content: 50 failed iam:DeleteGroup calls (44 NoSuchEntity, 5 DeleteConflict, 1 AccessDenied) by one IAM user over 6 weeks.
+    note: Deleting permission groups is account manipulation in T1098's sense, even when it fails. Kept as stated.
+
+  attack_techniques/T1098/aws_iam_successful_group_deletion/aws_iam_successful_group_deletion.json:
+    status: in-scope
+    content: 93 iam:DeleteGroup records (8 repeats), all succeeded, by 2 identities over 8 months.
+    note: Deleting permission groups is account manipulation in T1098's sense. Kept as stated.
+
+  attack_techniques/T1110.001/aws_login_failure/aws_cloudtrail_events.json:
+    status: in-scope
+    content: >-
+      7 failed console sign-ins (4 "No username found", 3 "Failed authentication")
+      from 4 addresses over 5 months.
+
+  attack_techniques/T1110.002/aws_rds_password_reset/aws_cloudtrail_events.json:
+    status: label-ambiguous
+    content: 2 rds:ModifyDBInstance calls that set a new master user password.
+    reason: >-
+      T1110.002 is recovering usable credentials from obtained password hashes; a
+      password reset through the API is not password cracking.
+
+  attack_techniques/T1110.003/aws_mulitple_failed_console_login/aws_cloudtrail.json:
+    status: in-scope
+    content: >-
+      31 failed console sign-ins ("Failed authentication") for 31 user names from one
+      address within 80 s. All 31 records share one eventID (copies with another
+      user name and time).
+
+  attack_techniques/T1110.003/aws_multiple_login_fail_per_user/cloudtrail.json:
+    status: in-scope
+    content: >-
+      28 failed console sign-ins from one address within 7 minutes (27 "No username
+      found") for 2 user names.
+    note: Many attempts against few user names is brute force rather than spraying (sibling T1110.001). Kept as stated.
+
+  attack_techniques/T1119/aws_exfil_datasync/cloudtrail.json:
+    status: in-scope
+    content: >-
+      2 datasync:CreateTask calls (copy to another region), 1 s3:PutBucketReplication
+      and 2 S3 batch job service events.
+
+  attack_techniques/T1201/aws_password_policy/cloudtrail.json:
+    status: in-scope
+    content: >-
+      3 iam:GetAccountPasswordPolicy, 3 UpdateAccountPasswordPolicy and 1
+      DeleteAccountPasswordPolicy by root and one IAM user within 76 minutes.
+    note: Reading the policy is T1201; updating and deleting it are further activity.
+
+  attack_techniques/T1204.003/aws_ecr_container_upload/aws_ecr_container_upload.json:
+    status: in-scope
+    content: 2 ecr:PutImage calls by one IAM user within 20 s.
+    note: Uploading an image is part of T1204.003 as ATT&CK describes it; nothing shows the image is malicious.
+
+  attack_techniques/T1204.003/aws_ecr_image_scanning/aws_ecr_scanning_findings_events.json:
+    status: label-ambiguous
+    content: >-
+      One ecr:DescribeImageScanFindings call by a role session; the response lists a
+      vulnerability scan's findings (2 high, 14 medium severity).
+    reason: >-
+      T1204.003 is a user running a malicious image (or an adversary uploading one);
+      reading vulnerability scan results contains neither. The technique stays in
+      scope through its other file.
+
+  attack_techniques/T1204/aws_updatelambdafunctioncode/aws_cloudtrail_events.json:
+    status: label-ambiguous
+    content: 2 lambda:UpdateFunctionCode calls by one IAM user a week apart.
+    reason: >-
+      T1204 (User Execution) relies on a user's action, e.g. after social
+      engineering; changing a function's code through the API involves no user
+      action.
+
+  attack_techniques/T1485/aws_delete_knowledge_base/cloudtrail.json:
+    status: in-scope
+    content: One bedrock:DeleteKnowledgeBase call by a role session.
+
+  attack_techniques/T1486/aws_kms_key/aws_cloudtrail_events.json:
+    status: in-scope
+    content: >-
+      674 KMS records over 4 hours by 10 identities, mostly reads (265 Decrypt, 140
+      DescribeKey, 109 ListAliases), with 3 PutKeyPolicy, 1 ScheduleKeyDeletion, 1
+      CancelKeyDeletion and 1 EnableKey.
+    note: Most of the file is ordinary KMS use; the key policy and deletion calls fit encryption for impact.
+
+  attack_techniques/T1486/s3_file_encryption/aws_cloudtrail_events.json:
+    status: out-of-scope
+    content: 2 s3:CopyObject calls (one with a KMS error), both eventCategory Data.
+    reason: The activity is recorded only as S3 data events; the tool covers management events.
+
+  attack_techniques/T1526/aws_security_scanner/aws_security_scanner.json:
+    status: in-scope
+    content: >-
+      1,071 calls of 54 different Describe/List/Get APIs in many regions by one IAM user within
+      3 minutes; 979 denied.
+
+  attack_techniques/T1530/aws_cloudwatch_logs_high_volume_retrieval/aws_cloudwatch_logs_high_volume_retrieval.json:
+    status: in-scope
+    content: >-
+      650 logs:GetLogEvents calls by one role session within 37 s (30 throttled),
+      recorded as management events.
+
+  attack_techniques/T1530/aws_exfil_high_no_getobject/cloudtrail.json:
+    status: out-of-scope
+    content: 100 s3:GetObject calls within one second, all eventCategory Data.
+    reason: S3 object reads are recorded only as data events; the tool covers management events.
+
+  attack_techniques/T1530/aws_s3_public_bucket/aws_cloudtrail_events.json:
+    status: label-ambiguous
+    content: >-
+      9 s3:PutBucketAcl calls: 7 grant read, write, ACL or full control to all
+      authenticated AWS users or to everyone, 2 set explicit grant lists.
+    reason: >-
+      T1530 is accessing data in cloud storage; changing a bucket's ACL reads no data.
+      The technique stays in scope through its other file.
+
+  attack_techniques/T1537/aws_ami_shared_public/aws_cloudtrail_events.json:
+    status: in-scope
+    content: 2 ec2:ModifyImageAttribute calls adding launch permission for another account and for everyone.
+
+  attack_techniques/T1537/aws_snapshot_exfil/aws_cloudtrail_events.json:
+    status: in-scope
+    content: >-
+      8 ec2:ModifySnapshotAttribute calls (create-volume permission for other accounts
+      and everyone, one removal, one invalid account) and 1 CreateSnapshot over 21
+      months by 3 identities.
+
+  attack_techniques/T1552/aws_getpassworddata/aws_cloudtrail_events.json:
+    status: in-scope
+    content: 60 ec2:GetPasswordData calls by role sessions within 5 minutes, all UnauthorizedOperation.
+
+  attack_techniques/T1555.006/aws_anomalous_secrets_manager_batch_retrieval/aws_anomalous_secrets_manager_batch_retrieval.json:
+    status: in-scope
+    content: 13 secretsmanager:BatchGetSecretValue calls by one role session within 2 minutes.
+
+  attack_techniques/T1562.007/aws_create_acl/aws_cloudtrail_events.json:
+    status: in-scope
+    content: >-
+      13,274 records over 4 hours by 36 identities, mostly EC2 reads (10,760
+      DescribeInstances); among them CreateNetworkAcl, 4 CreateNetworkAclEntry and 1
+      ReplaceNetworkAclEntry allowing inbound traffic from 0.0.0.0/0, each entry later
+      deleted.
+
+  attack_techniques/T1562.008/aws_bedrock_delete_guardrails/cloudtrail.json:
+    status: label-ambiguous
+    content: One bedrock:DeleteGuardrail call by a role session.
+    reason: >-
+      T1685.002 (formerly T1562.008) covers disabling or modifying cloud logging; a
+      Bedrock guardrail filters model input and output and is not a log. The
+      technique stays in scope through its other files.
+
+  attack_techniques/T1562.008/aws_bedrock_delete_model_invocation_logging/cloudtrail.json:
+    status: in-scope
+    content: One bedrock:DeleteModelInvocationLoggingConfiguration call by an IAM user, AccessDenied.
+
+  attack_techniques/T1562.008/aws_delete_security_services/aws_cloudtrail_events.json:
+    status: in-scope
+    content: >-
+      8 calls over 6 days by 2 IAM users: guardduty:DeleteDetector (2) and DeleteIPSet,
+      waf:DeleteRule (2) and DeleteWebACL (2), logs:DeleteLogStream; 5 errors.
+    note: Mostly security services (T1685, Disable or Modify Tools); the log stream deletion is cloud logging.
+
+  attack_techniques/T1562.008/delete_cloudwatch_log_group/aws_cloudtrail_events.json:
+    status: in-scope
+    content: 2 cloudtrail:DeleteTrail, 1 StopLogging and 1 logs:DeleteLogGroup over 3 weeks by 2 IAM users.
+
+  attack_techniques/T1562.008/put_bucketlifecycle/aws_cloudtrail_events.json:
+    status: in-scope
+    content: 5 s3:PutBucketLifecycle calls over a week by 2 identities.
+
+  attack_techniques/T1562.008/stop_delete_cloudtrail/aws_cloudtrail_events.json:
+    status: in-scope
+    content: 2 cloudtrail:DeleteTrail and 1 StopLogging by one IAM user over 2 weeks.
+
+  attack_techniques/T1562.008/update_cloudtrail/aws_cloudtrail_events.json:
+    status: in-scope
+    content: >-
+      One IAM user within 90 s: CreateBucket, PutBucketPolicy, CreateTrail,
+      StartLogging, UpdateTrail, DeleteTrail, DeleteBucket.
+
+  attack_techniques/T1578.005/aws_ec2_startup_script_modification/aws_ec2_startup_script_modification.json:
+    status: in-scope
+    content: ec2:StopInstances, then ec2:ModifyInstanceAttribute on userData, by one role session within 64 s.
+
+  attack_techniques/T1580/aws_bedrock_list_foundation_model_failures/cloudtrail.json:
+    status: in-scope
+    content: 12 bedrock:ListFoundationModels calls in 2 regions by one IAM user within 38 s, all AccessDenied.
+
+  attack_techniques/T1580/aws_iam_accessdenied_discovery_events/aws_iam_accessdenied_discovery_events.json:
+    status: in-scope
+    content: >-
+      1,150 denied calls of 82 different APIs (all Describe/List/Get except 20
+      iam:GenerateCredentialReport) across regions by 2 IAM users within 2 hours.
+
+  attack_techniques/T1580/aws_iam_assume_role_policy_brute_force/aws_iam_assume_role_policy_brute_force.json:
+    status: label-ambiguous
+    content: >-
+      10 iam:CreatePolicy records (2 distinct calls, the rest repeats), both rejected
+      as MalformedPolicyDocument for syntax (a resource not in ARN format, a statement
+      ID that is not alphanumeric).
+    reason: >-
+      T1580 is discovering cloud infrastructure; two policies rejected for syntax
+      probe no principal or resource. The technique stays in scope through its other
+      files.
+
+  attack_techniques/T1580/aws_iam_excessive_list_command_usage/aws_iam_excessive_list_command_usage.json:
+    status: in-scope
+    content: >-
+      4,196 calls of 60 different List/Describe/Get APIs by 5 IAM users over a week:
+      2,703 s3:ListObjects
+      (data events) and 1,493 management events (e.g. 555 iam:ListRoles); 497 denied.
+
+  attack_techniques/T1586.003/aws_console_login_multiple_ips/cloudtrail.json:
+    status: label-ambiguous
+    content: >-
+      8 root console sign-ins (6 succeeded, 2 failed, MFA not used) from 2 addresses
+      within 40 minutes; 4 eventIDs, each used twice.
+    reason: >-
+      T1586.003 (Resource Development) is compromising third-party cloud accounts to
+      use as adversary infrastructure; sign-ins to the target account's root user
+      show the use of an account, not that.
+
+  attack_techniques/T1621/aws_failed_mfa/cloudtrail.json:
+    status: in-scope
+    content: >-
+      14 failed root console sign-ins with MFA used ("Failed authentication") from 2
+      addresses over 3 days; 3 eventIDs for the 14 records (copies with another time).
+
+  suspicious_behaviour/abnormally_high_cloud_instances_launched/cloudtrail_behavioural_detections.json:
+    status: no-label
+    content: >-
+      8,100 records: 2,646 ec2:RunInstances, 2,636 TerminateInstances, security group
+      create/delete, 62 console sign-ins; only 7 distinct eventIDs.
+    reason: Splunk states no technique for this file.
