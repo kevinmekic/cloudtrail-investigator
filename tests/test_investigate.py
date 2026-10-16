@@ -372,3 +372,167 @@ def test_unknown_starting_point_is_an_error(db: Path) -> None:
 def test_invalid_scope(scope: dict, message: str) -> None:
     with pytest.raises(InvestigationError, match=message):
         Scope(**scope)
+
+
+# ------------------------------------------------------------------------------- blast radius
+
+
+def blast_records() -> list[dict[str, Any]]:
+    role_arn = f"arn:aws:iam::{ACCOUNT}:role/admin"
+    return [
+        at(
+            1,
+            ALICE,
+            eventSource="s3.amazonaws.com",
+            eventName="GetObject",
+            requestParameters={"bucketName": "data", "key": "a.txt"},
+        ),
+        at(
+            2,
+            ALICE,
+            eventSource="s3.amazonaws.com",
+            eventName="PutObject",
+            requestParameters={"bucketName": "data", "key": "b.txt"},
+            errorCode="AccessDenied",
+        ),
+        at(
+            3,
+            ALICE,
+            eventSource="s3.amazonaws.com",
+            eventName="GetBucketAcl",
+            requestParameters={"bucketName": "data"},
+            resources=[{"ARN": "arn:aws:s3:::data", "type": "AWS::S3::Bucket"}],
+        ),
+        at(4, ALICE, eventName="GetUser", requestParameters={"userName": "Level6"}),
+        at(5, ALICE, eventName="GetRole", requestParameters={"roleName": "Level6"}),
+        at(
+            6,
+            ALICE,
+            eventSource="ec2.amazonaws.com",
+            eventName="RunInstances",
+            requestParameters={
+                "instancesSet": {"items": [{"imageId": "ami-1"}]},
+                "instanceType": "p2.8xlarge",
+            },
+            errorCode="Client.InstanceLimitExceeded",
+        ),
+        at(
+            7,
+            ALICE,
+            eventSource="ec2.amazonaws.com",
+            eventName="DescribeInstances",
+            requestParameters={"filterSet": {"items": [{"name": "tag:Name"}]}},
+        ),
+        at(8, ALICE, eventName="ListUsers"),
+        at(
+            9,
+            ALICE,
+            eventSource="sts.amazonaws.com",
+            eventName="AssumeRole",
+            requestParameters={"roleArn": role_arn, "roleSessionName": "s"},
+            resources=[{"ARN": role_arn, "type": "AWS::IAM::Role", "accountId": ACCOUNT}],
+            errorCode="AccessDenied",
+        ),
+        at(
+            10,
+            ALICE,
+            eventSource="kms.amazonaws.com",
+            eventName="Decrypt",
+            awsRegion="eu-west-1",
+            resources=[
+                {"ARN": "arn:aws:kms:eu-west-1:111122223333:key/k1", "type": "AWS::KMS::Key"},
+                {"ARN": "arn:aws:ecr:eu-west-1:111122223333:repository/r"},
+            ],
+        ),
+    ]
+
+
+@pytest.fixture(scope="module")
+def blast(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
+    db = make_db(tmp_path_factory.mktemp("blast"), blast_records())
+    return run(db, access_key=KEY_A).blast_radius
+
+
+def entry(blast: dict, service: str, kind: str, resource: str) -> dict[str, Any]:
+    (service_entry,) = [s for s in blast["services"] if s["service"] == service]
+    (found,) = [
+        r for r in service_entry["listed"] if (r["type"], r["resource"]) == (kind, resource)
+    ]
+    return found
+
+
+def test_blast_radius_splits_succeeded_denied_and_failed(blast: dict) -> None:
+    bucket = entry(blast, "s3", "bucket", "data")
+    assert bucket["events"] == 3
+    assert bucket["succeeded"]["events"] == 2
+    assert bucket["succeeded"]["apis"] == {"GetBucketAcl": 1, "GetObject": 1}
+    assert bucket["succeeded"]["event_ids"] == [eid(1), eid(3)]
+    assert bucket["denied"]["apis"] == {"PutObject": 1}
+    assert bucket["failed"] is None
+    image = entry(blast, "ec2", "image", "ami-1")
+    assert (image["succeeded"], image["denied"]) == (None, None)
+    assert image["failed"]["event_ids"] == [eid(6)]
+
+
+def test_resources_field_and_parameters_merge(blast: dict) -> None:
+    # The S3 ARN in resources[] is the bucket that bucketName names.
+    assert entry(blast, "s3", "bucket", "data")["fields"] == [
+        "requestParameters.bucketName",
+        "resources[AWS::S3::Bucket]",
+    ]
+    role = entry(blast, "sts", "role", f"arn:aws:iam::{ACCOUNT}:role/admin")
+    assert role["fields"] == ["requestParameters.roleArn", "resources[AWS::IAM::Role]"]
+    assert role["denied"]["events"] == 1
+
+
+def test_objects_and_same_named_resources_of_other_types_stay_apart(blast: dict) -> None:
+    assert entry(blast, "s3", "object", "data/a.txt")["succeeded"]["events"] == 1
+    assert entry(blast, "s3", "object", "data/b.txt")["denied"]["events"] == 1
+    assert entry(blast, "iam", "user", "Level6")["events"] == 1
+    assert entry(blast, "iam", "role", "Level6")["events"] == 1
+
+
+def test_resource_types_from_the_resources_field(blast: dict) -> None:
+    key = entry(blast, "kms", "key", "arn:aws:kms:eu-west-1:111122223333:key/k1")
+    assert key["regions"] == ["eu-west-1"]
+    # No type stated: kept, marked unknown.
+    assert entry(blast, "kms", "unknown", "arn:aws:ecr:eu-west-1:111122223333:repository/r")
+
+
+def test_parameters_that_are_not_resources_are_ignored(blast: dict) -> None:
+    ec2 = next(s for s in blast["services"] if s["service"] == "ec2")
+    assert [(r["type"], r["resource"]) for r in ec2["listed"]] == [("image", "ami-1")]
+    assert blast["events_without_resource"] == {
+        "events": 2,
+        "apis": [
+            {"api": "ec2:DescribeInstances", "events": 1},
+            {"api": "iam:ListUsers", "events": 1},
+        ],
+    }
+
+
+def test_service_totals(blast: dict) -> None:
+    s3 = next(s for s in blast["services"] if s["service"] == "s3")
+    assert (s3["events"], s3["resources"]) == (3, 3)
+    assert (s3["succeeded_resources"], s3["denied_resources"], s3["failed_resources"]) == (2, 2, 0)
+    assert blast["services"][0]["service"] == "s3"  # most events first
+
+
+def test_blast_radius_lists_are_capped(tmp_path: Path) -> None:
+    records = [
+        at(
+            n,
+            ALICE,
+            eventSource="s3.amazonaws.com",
+            eventName="GetBucketAcl",
+            requestParameters={"bucketName": f"b{n % 3}"},
+        )
+        for n in range(1, 10)
+    ]
+    with connect(make_db(tmp_path, records)) as con:
+        inv = investigate(con, Scope(access_key=KEY_A, max_resources=2, max_evidence=2))
+    (s3,) = inv.blast_radius["services"]
+    assert s3["resources"] == 3
+    assert [r["resource"] for r in s3["listed"]] == ["b0", "b1"]
+    assert s3["listed"][0]["succeeded"]["events"] == 3
+    assert s3["listed"][0]["succeeded"]["event_ids"] == [eid(3), eid(6)]

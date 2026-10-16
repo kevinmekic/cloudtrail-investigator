@@ -1,4 +1,4 @@
-"""Investigation of one identity: timeline and session graph.
+"""Investigation of one identity: timeline, session graph and blast radius.
 
 The starting point is an access key or a principal ARN. Its events form the
 first session of a session graph. From there the investigation follows the
@@ -12,10 +12,17 @@ Every credential-issuing call of a session is recorded as a pivot with a
 status, so that the analyst sees which pivots were followed and why the others
 were not (request failed, key not in the log, key never used, limits reached).
 
+The blast radius lists the resources the investigated events name, per service,
+split into succeeded, denied (permission errors) and failed (other errors).
+Resources come from the event's ``resources`` field and from request parameters
+that name a resource (``RESOURCE_PARAMETERS``).
+
 Bounded by design: ``max_depth`` caps how many pivots deep the graph goes,
 ``max_sessions`` caps how many sessions are followed, ``max_events`` caps how
-many events the timeline lists (counts are always complete). A key already in
-the graph is never followed again, so cycles end.
+many events the timeline lists, ``max_resources`` how many resources are listed
+per service and ``max_evidence`` how many eventIDs are listed per entry (counts
+are always complete). A key already in the graph is never followed again, so
+cycles end.
 """
 
 import re
@@ -44,6 +51,61 @@ CREATE_ACCESS_KEY = ("iam.amazonaws.com", "CreateAccessKey")
 # HIDDEN_DUE_TO_SECURITY_REASONS) cannot be linked to later events.
 _ACCESS_KEY = re.compile(r"[A-Z0-9]{16,128}")
 _ROLE_ARN = re.compile(r"arn:[^:]+:iam::\d{12}:role/.+")
+
+# Request parameters that name a resource: (service, parameter, resource type).
+# The service is the event source without ".amazonaws.com". Parameters are
+# matched at any depth (EC2 nests them in item lists). The same parameter can
+# mean different things per service ("groupName" is a security group in EC2 and
+# a group in IAM; "name" is a filter name in EC2 but a trail in CloudTrail), so
+# it only counts for the services listed. Chosen from the parameters seen in the
+# flaws.cloud and Invictus data; other parameters are not read as resources.
+RESOURCE_PARAMETERS: tuple[tuple[str, str, str], ...] = (
+    ("s3", "bucketName", "bucket"),
+    ("ec2", "instanceId", "instance"),
+    ("ec2", "imageId", "image"),
+    ("ec2", "snapshotId", "snapshot"),
+    ("ec2", "sourceSnapshotId", "snapshot"),
+    ("ec2", "volumeId", "volume"),
+    ("ec2", "groupId", "security group"),
+    ("ec2", "groupName", "security group"),
+    ("ec2", "vpcId", "vpc"),
+    ("ec2", "subnetId", "subnet"),
+    ("ec2", "keyName", "key pair"),
+    ("ec2", "allocationId", "elastic ip"),
+    ("iam", "userName", "user"),
+    ("iam", "roleName", "role"),
+    ("iam", "groupName", "group"),
+    ("iam", "policyArn", "policy"),
+    ("iam", "instanceProfileName", "instance profile"),
+    ("iam", "accessKeyId", "access key"),
+    ("iam", "serialNumber", "mfa device"),
+    ("sts", "serialNumber", "mfa device"),
+    ("sts", "roleArn", "role"),
+    ("lambda", "functionName", "function"),
+    ("logs", "logGroupName", "log group"),
+    ("apigateway", "restApiId", "rest api"),
+    ("cloudtrail", "name", "trail"),
+    ("cloudtrail", "trailName", "trail"),
+    ("ssm", "instanceId", "instance"),
+    ("ssm", "name", "parameter"),
+    ("secretsmanager", "name", "secret"),
+    ("secretsmanager", "secretId", "secret"),
+    ("kms", "keyId", "key"),
+    ("cloudformation", "stackName", "stack"),
+    ("rds", "dBInstanceIdentifier", "db instance"),
+    ("rds", "dBClusterIdentifier", "db cluster"),
+    ("rds", "dBSnapshotIdentifier", "db snapshot"),
+    ("rds", "dBClusterSnapshotIdentifier", "db cluster snapshot"),
+)
+# Types of the resources field that name the same kinds as parameters above, so
+# both sources merge into one entry. Other types are kept as AWS states them.
+RESOURCE_FIELD_TYPES = {
+    "AWS::S3::Bucket": "bucket",
+    "AWS::S3::Object": "object",
+    "AWS::IAM::Role": "role",
+    "AWS::KMS::Key": "key",
+}
+OUTCOMES = ("succeeded", "denied", "failed")
 
 PIVOT_STATUSES = {
     "followed": "the issued key is used later; its events are the next session",
@@ -107,6 +169,7 @@ class Scope:
     max_depth: int = 3
     max_sessions: int = 1000
     max_events: int = 100_000
+    max_resources: int = 1000
     max_evidence: int = 20
     follow_created_keys: bool = False
 
@@ -115,7 +178,7 @@ class Scope:
             raise InvestigationError("give exactly one of access key and principal")
         if self.start and self.end and self.start >= self.end:
             raise InvestigationError("the start of the time range must be before its end")
-        for name in ("max_depth", "max_sessions", "max_events", "max_evidence"):
+        for name in ("max_depth", "max_sessions", "max_events", "max_resources", "max_evidence"):
             if getattr(self, name) < 0:
                 raise InvestigationError(f"{name} must not be negative")
 
@@ -175,6 +238,7 @@ class Investigation:
     summary: dict[str, Any]
     apis: list[dict[str, Any]]
     timeline: list[dict[str, Any]]
+    blast_radius: dict[str, Any]
 
 
 def key_kind(key: str) -> str:
@@ -264,6 +328,7 @@ def investigate(con: duckdb.DuckDBPyConnection, scope: Scope) -> Investigation:
         summary=_summary(con, sessions, pivots),
         apis=_api_counts(con),
         timeline=_timeline(con, scope.max_events),
+        blast_radius=_blast_radius(con, scope),
     )
 
 
@@ -540,3 +605,129 @@ def _timeline(con: duckdb.DuckDBPyConnection, limit: int) -> list[dict[str, Any]
         {"limit": limit},
     ).fetchall()
     return [dict(zip(TIMELINE_FIELDS, row, strict=True)) for row in rows]
+
+
+def _resource_refs_sql() -> str:
+    """SQL: the resources an event names, as a list of (type, resource, field) structs."""
+    parts = []
+    for service, name, kind in RESOURCE_PARAMETERS:
+        parts.append(
+            f"CASE WHEN e.event_source = '{service}.amazonaws.com' THEN list_transform("
+            f"list_filter(json_extract(e.request_parameters, '$..{name}'), "
+            f"lambda v: json_type(v) = 'VARCHAR' AND (v->>'$') <> ''), "
+            f"lambda v: {{'type': '{kind}', 'resource': (v->>'$'), "
+            f"'field': 'requestParameters.{name}'}}) END"
+        )
+    # S3 data events name an object by bucket and key.
+    parts.append(
+        "CASE WHEN e.event_source = 's3.amazonaws.com' "
+        "AND (e.request_parameters->>'bucketName') <> '' "
+        "AND (e.request_parameters->>'key') <> '' "
+        "THEN [{'type': 'object', "
+        "'resource': (e.request_parameters->>'bucketName') || '/' "
+        "|| (e.request_parameters->>'key'), "
+        "'field': 'requestParameters.bucketName+key'}] END"
+    )
+    # The resources field, as AWS states it. S3 ARNs carry no account or region,
+    # so they become the bucket (or bucket/key) names the parameters use.
+    types = " ".join(
+        f"WHEN '{aws_type}' THEN '{kind}'" for aws_type, kind in RESOURCE_FIELD_TYPES.items()
+    )
+    parts.append(
+        "CASE WHEN json_type(e.resources) = 'ARRAY' THEN list_transform(list_filter("
+        "from_json(e.resources, '[\"JSON\"]'), "
+        "lambda r: json_type(r) = 'OBJECT' AND (r->>'ARN') <> ''), "
+        f"lambda r: {{'type': CASE (r->>'type') {types} "
+        "ELSE coalesce(r->>'type', 'unknown') END, "
+        "'resource': regexp_replace(r->>'ARN', '^arn:[^:]+:s3:::', ''), "
+        "'field': 'resources[' || coalesce(r->>'type', '?') || ']'}) END"
+    )
+    return "list_concat(" + ", ".join(parts) + ")"
+
+
+def _blast_radius(con: duckdb.DuckDBPyConnection, scope: Scope) -> dict[str, Any]:
+    """Resources the events name, per service, split by outcome."""
+    con.execute(
+        f"""
+        CREATE OR REPLACE TEMP TABLE inv_refs AS
+        SELECT event_id, ref.type AS type, ref.resource AS resource,
+               list_sort(list(DISTINCT ref.field)) AS fields
+        FROM (SELECT e.event_id, unnest({_resource_refs_sql()}) AS ref FROM {_INV})
+        GROUP BY event_id, type, resource
+        """
+    )
+    rows = con.execute(
+        f"""
+        SELECT replace(e.event_source, '.amazonaws.com', '') AS service, r.type, r.resource,
+               {OUTCOME_SQL} AS outcome, count(*), histogram(e.event_name),
+               min(e.event_time), max(e.event_time),
+               list(e.event_id ORDER BY e.event_time, e.event_id)[1:$evidence],
+               list_sort(list_distinct(flatten(list(r.fields)))),
+               list(DISTINCT e.aws_region) FILTER (WHERE e.aws_region IS NOT NULL)
+        FROM inv_refs r JOIN events e ON e.event_id = r.event_id
+        GROUP BY service, r.type, r.resource, outcome
+        """,
+        {"evidence": scope.max_evidence},
+    ).fetchall()
+    resources: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for service, kind, resource, outcome, n, apis, first, last, ids, fields, regions in rows:
+        entry = resources.setdefault(
+            (service, kind, resource),
+            {"type": kind, "resource": resource, "events": 0, "fields": set(), "regions": set()}
+            | {name: None for name in OUTCOMES},
+        )
+        entry["events"] += n
+        entry["fields"].update(fields)
+        entry["regions"].update(regions or [])
+        entry[outcome] = {
+            "events": n,
+            "apis": dict(sorted(apis.items(), key=lambda item: (-item[1], item[0]))),
+            "first_seen": first,
+            "last_seen": last,
+            "event_ids": ids,
+        }
+
+    services: dict[str, list[dict[str, Any]]] = {}
+    for (service, _, _), entry in resources.items():
+        entry["fields"] = sorted(entry["fields"])
+        entry["regions"] = sorted(entry["regions"])
+        services.setdefault(service, []).append(entry)
+    service_events = dict(
+        con.execute(
+            "SELECT replace(e.event_source, '.amazonaws.com', ''), count(DISTINCT r.event_id) "
+            "FROM inv_refs r JOIN events e ON e.event_id = r.event_id GROUP BY 1"
+        ).fetchall()
+    )
+    listed = []
+    for service, entries in services.items():
+        entries.sort(key=lambda entry: (-entry["events"], entry["type"], entry["resource"]))
+        listed.append(
+            {
+                "service": service,
+                "events": service_events[service],
+                "resources": len(entries),
+                **{
+                    f"{outcome}_resources": sum(1 for entry in entries if entry[outcome])
+                    for outcome in OUTCOMES
+                },
+                "listed": entries[: scope.max_resources],
+            }
+        )
+    listed.sort(key=lambda service: (-service["events"], service["service"]))
+
+    unnamed = con.execute(
+        f"""
+        SELECT replace(e.event_source, '.amazonaws.com', '') || ':' || e.event_name AS api,
+               count(*) AS n
+        FROM {_INV} ANTI JOIN (SELECT DISTINCT event_id FROM inv_refs) r
+             ON r.event_id = e.event_id
+        GROUP BY api ORDER BY n DESC, api
+        """
+    ).fetchall()
+    return {
+        "services": listed,
+        "events_without_resource": {
+            "events": sum(n for _, n in unnamed),
+            "apis": [{"api": api, "events": n} for api, n in unnamed[:10]],
+        },
+    }
