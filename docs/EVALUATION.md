@@ -62,8 +62,14 @@ influenced by the rules' results on it:
    content (see below).
 4. Only then the evaluation run.
 
-**Separately reported rule parts.** Rules added or materially changed after the
-rule set was fixed would be reported separately; there are none.
+**Changes after the freeze.** One change was made after the frozen run: a bug
+fix in how a call's outcome is decided (failed sign-ins counted as succeeded).
+It changes `root-account-usage.yml`, `macros.py` and `detect.py`. The results
+of the frozen rule set stay the primary result; the run after the fix is
+reported separately in "Post-freeze result" below.
+
+**Separately reported rule parts.** No rule was added or materially changed
+after the rule set was fixed.
 `snapshot-or-image-shared` also covers RDS DB and cluster snapshots made usable
 by other accounts, beyond the two EC2 APIs (snapshot and image attributes) it
 was specified for. That part was decided while the rule was written, from the
@@ -338,13 +344,12 @@ How to read it (interpretation of the findings' evidence):
   (`ec2:GetPasswordData`) through the burst and permission-error rules, which
   are mapped to T1580.
 - **The T1621 detection rests on failed root sign-ins**, which
-  `root-account-usage` counts as root activity. Its findings report them as
-  succeeded ("0 failed"): CloudTrail records a failed console sign-in in
-  `responseElements.ConsoleLogin` ("Failure"), not in `errorCode`, and the
-  framework derives a finding's outcome from `errorCode`. This is a known gap,
-  not fixed after the rules were frozen. It is to be fixed as a bug fix; the
-  evaluation run after that fix will be reported as a separate post-freeze
-  result, and the frozen result here stays the primary one.
+  `root-account-usage` counts as root activity. In this frozen result its
+  findings report them as succeeded ("0 failed"): CloudTrail records a failed
+  console sign-in in `responseElements.ConsoleLogin` ("Failure"), not in
+  `errorCode`, and the framework derived a finding's outcome from `errorCode`
+  alone. Fixed after the freeze; the post-freeze result below reports these
+  findings as failed and changes no rate.
 - **14 in-scope techniques are missed.** For 13 of them no rule looks for the
   behaviour in the scenario (SSH keys pushed through EC2 Instance Connect,
   deleted IAM groups and policies, failed console sign-ins, DataSync tasks,
@@ -462,6 +467,63 @@ assistant, each reviewed and decided by a human: all 65 are decided.
 - flaws.cloud is mostly attack traffic against a public challenge, with little
   ordinary activity, which also limits what the sample can show about noise in
   a normal account.
+
+## Post-freeze result (2026-10-16): failed sign-ins
+
+The frozen result above is the primary result. This section reports one run
+after a change to the rule set, next to it.
+
+**What changed and why.** AWS sign-in events (`ConsoleLogin`, `CheckMfa`,
+`GetSigninToken`) record a failed attempt as `"Failure"` under the event's own
+name in `responseElements`, with an `errorMessage` but without an `errorCode`
+(AWS CloudTrail User Guide, "AWS Management Console sign-in events"; IAM User
+Guide, "Example sign-in failure event"). The framework derived outcomes from
+`errorCode` alone, so failed sign-ins counted as succeeded, in findings,
+investigations and reports. The bug was found while checking the test-set
+T1621 detection after the frozen run; the fix follows the AWS record format,
+not the test set's technique list, and the development data shows the same
+pattern (flaws.cloud: 12 failed `ConsoleLogin` and 14 failed `CheckMfa` events,
+none with an `errorCode`). A macro, `ctinv_failed`, now decides whether a call
+failed, and `root-account-usage` counts failed sign-ins in its summary.
+
+| File | SHA-256 at the tag | SHA-256 after the fix |
+|---|---|---|
+| `root-account-usage.yml` | `8059f13f4ba94f4c…` | `0e2885b2ff6d72a2…` |
+| `macros.py` | `ba43907cf5fb1056…` | `c57c35590826d5ac…` |
+| `detect.py` | `4f33699964e78d89…` | `0c2aa2c520fa2ce2…` |
+
+All other rule files and pipeline modules are unchanged.
+
+**Result.** Every rate is the same as in the frozen run:
+
+| Measure | Frozen (primary) | Post-freeze |
+|---|---|---|
+| Test set: by a rule mapped to the technique | 5 / 23 | 5 / 23 |
+| Test set: any finding in the scenario | 9 / 23 | 9 / 23 |
+| Test set: any finding, excluded techniques counted as missed | 9 / 27 | 9 / 27 |
+| Test set: any finding, without the techniques exposed before the split | 8 / 21 | 8 / 21 |
+| Test set: any finding, every in-scope file detected | 6 / 23 | 6 / 23 |
+| Test set: any finding, every record kept | 9 / 23 | 9 / 23 |
+| Development set: detected | 15 / 26 | 15 / 26 |
+| Development set: strict | 15 / 26 | 15 / 26 |
+| Development set: by a rule mapped to the stated ATT&CK ID | 6 / 12 | 6 / 12 |
+| Development set: failed attempts detected | 2 / 3 | 2 / 3 |
+
+No finding appeared or disappeared (106 findings over both sets, same IDs). The
+outcome of three test-set findings, all of `root-account-usage`, changed:
+
+- **T1621** (`aws_failed_mfa`): both findings, with 1 and 2 evidence events,
+  changed from succeeded to **failed**. T1621 still counts as "any finding in
+  the scenario", and the result now shows that this rests only on failed root
+  sign-in attempts.
+- **T1586.003** (`aws_console_login_multiple_ips`, an excluded file): one
+  finding with 4 evidence events changed from succeeded to partly failed.
+
+On the development database (flaws.cloud and Invictus, 1,030 findings) no
+finding changed: same IDs, outcomes and summaries. The manually reviewed
+sample is the same 65 findings with the same decisions.
+
+Run: `results/evaluation-20261016T211129Z.*`, 33 s, peak memory 0.33 GB.
 
 ## Limitations
 
