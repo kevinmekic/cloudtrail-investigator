@@ -41,7 +41,7 @@ None.
 {% if r.periods is not none %}
 ### Activity periods
 
-Calls of one session to one API with the same outcome form one period while no gap between them exceeds {{ r.periods.gap_seconds | duration }}. Other calls can happen in between, so periods may overlap{{ cut(r.periods, "periods, in time order") }}.
+Calls of one session to one API with the same outcome form one period while no gap between them exceeds {{ r.periods.gap_seconds | duration }} (--period-gap). Other calls can happen in between, so periods may overlap in time{{ cut(r.periods, "periods, in time order") }}.
 
 | First – last | Session | API | Outcome | Events | Regions | Error codes | Evidence (first, last) |
 |---|---|---|---|---:|---|---|---|

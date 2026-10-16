@@ -99,7 +99,7 @@ details > summary { cursor: pointer; font-weight: 600; }
 
 {% if r.periods is not none %}
 <h3>Activity periods</h3>
-<p>Calls of one session to one API with the same outcome form one period while no gap between them exceeds {{ r.periods.gap_seconds | duration }}. Other calls can happen in between, so periods may overlap.</p>
+<p>Calls of one session to one API with the same outcome form one period while no gap between them exceeds {{ r.periods.gap_seconds | duration }} (<code>--period-gap</code>). Other calls can happen in between, so periods may overlap in time.</p>
 {{ cut(r.periods, "periods (in time order)") }}
 <div class="scroll"><table>
 <thead><tr><th>First – last</th><th>Session</th><th>API</th><th>Outcome</th><th>Events</th><th>Regions</th><th>Error codes</th><th>Evidence (first, last)</th></tr></thead>

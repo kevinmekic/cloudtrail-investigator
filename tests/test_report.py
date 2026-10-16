@@ -295,6 +295,46 @@ def test_activity_periods(written: dict) -> None:
     assert periods["total"] == len(periods["rows"])
 
 
+def test_period_gap_option(tmp_path: Path) -> None:
+    db = build(tmp_path)
+
+    def run(*options: str) -> tuple[dict, str, str]:
+        out = tmp_path / "out" / "-".join(options or ("default",))
+        argv = ["report", "--db", str(db), "--access-key", KEY_A, "--out-dir", str(out)]
+        assert main([*argv, *options]) == 0
+        md, html, data = (next(out.glob(f"*{ext}")) for ext in (".md", ".html", ".json"))
+        return json.loads(data.read_text()), md.read_text(), html.read_text()
+
+    def list_buckets(data: dict) -> list[tuple[str, str, int]]:
+        return [
+            (p["first_seen"], p["last_seen"], p["events"])
+            for p in data["report"]["activity_periods"]
+            if p["api"] == "s3:ListBuckets"
+        ]
+
+    data, md, html = run()
+    assert data["report"]["period_gap_seconds"] == 900
+    # Default: the call 40 minutes after the others starts a new period.
+    assert [n for _, _, n in list_buckets(data)] == [4, 1]
+    assert "no gap between them exceeds 15 minutes (--period-gap)" in md
+    assert "no gap between them exceeds 15 minutes (<code>--period-gap</code>)" in html
+    for text in (md, html):
+        assert "Other calls can happen in between, so periods may overlap in time" in text
+
+    data, md, html = run("--period-gap", "3000")
+    assert data["report"]["period_gap_seconds"] == 3000
+    ((first, last, n),) = list_buckets(data)
+    assert (first, last, n) == ("2023-01-01T00:05:00Z", "2023-01-01T00:45:00Z", 5)
+    # The merged period overlaps the GetObject period inside it.
+    (get_object,) = [p for p in data["report"]["activity_periods"] if p["api"] == "s3:GetObject"]
+    assert first < get_object["first_seen"] <= get_object["last_seen"] < last
+    assert "no gap between them exceeds 50 minutes (--period-gap)" in md
+
+    with pytest.raises(SystemExit) as exc:
+        main(["report", "--db", str(db), "--access-key", KEY_A, "--period-gap", "-1"])
+    assert exc.value.code == 2
+
+
 def test_findings_grouped_by_tactic_with_former_id(written: dict) -> None:
     findings = written["report"].model["findings"]
     assert [t["name"] for t in findings["tactics"]] == ["Defense Impairment"]
