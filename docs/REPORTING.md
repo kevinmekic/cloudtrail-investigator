@@ -150,7 +150,8 @@ anonymised (flaws.cloud), the IOC section is labelled:
 
 > Source IPs anonymised by the dataset publisher - not real attacker infrastructure. Do not block, look up or report them.
 
-and every IP row says whether it is anonymised. flaws.cloud's publisher
+and every IP row says whether it is anonymised (for an anonymised address the
+report does not say whether it is public: the value was chosen at random). flaws.cloud's publisher
 replaced IP addresses, account IDs and access keys with random values of the
 same format, so the addresses in such a report may belong to unrelated people.
 A dataset that is not in the registry (logs ingested under another name) is

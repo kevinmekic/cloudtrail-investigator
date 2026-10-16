@@ -208,7 +208,7 @@ Evidence: {{ ev(n.evidence) }}</div></li>
 <thead><tr><th>IP address</th><th>Anonymised</th><th>Public</th><th>Events</th><th>First – last seen</th><th>Sessions</th><th>Datasets</th><th>Evidence</th></tr></thead>
 <tbody>
 {% for x in r.iocs.source_ips.rows %}
-<tr><td class="v"><code>{{ x.value }}</code></td><td>{{ "yes" if x.anonymised else "no" }}</td><td>{{ "yes" if x.scope == "public" else "no" }}</td><td class="n">{{ x.events | num }}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ x.sessions | some(5) }}</td><td class="v">{{ x.datasets | join(", ") }}</td><td>{{ ev(x.evidence) }}</td></tr>
+<tr><td class="v"><code>{{ x.value }}</code></td><td>{{ "yes" if x.anonymised else "no" }}</td><td>{{ "n/a" if x.anonymised else ("yes" if x.scope == "public" else "no") }}</td><td class="n">{{ x.events | num }}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ x.sessions | some(5) }}</td><td class="v">{{ x.datasets | join(", ") }}</td><td>{{ ev(x.evidence) }}</td></tr>
 {% endfor %}
 </tbody></table></div>
 {% else %}

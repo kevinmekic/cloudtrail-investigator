@@ -160,7 +160,7 @@ Values as logged, by number of events. Evidence: the first and the last event wi
 | IP address | Anonymised | Public | Events | First – last seen | Sessions | Datasets | Evidence |
 |---|---|---|---:|---|---|---|---|
 {% for x in r.iocs.source_ips.rows %}
-| {{ x.value }} | {{ "yes" if x.anonymised else "no" }} | {{ "yes" if x.scope == "public" else "no" }} | {{ x.events | num }} | {{ x.first_seen | span(x.last_seen) }} | {{ x.sessions | some(5) }} | {{ x.datasets | join(", ") }} | {{ x.evidence | join(", ") }} |
+| {{ x.value }} | {{ "yes" if x.anonymised else "no" }} | {{ "n/a" if x.anonymised else ("yes" if x.scope == "public" else "no") }} | {{ x.events | num }} | {{ x.first_seen | span(x.last_seen) }} | {{ x.sessions | some(5) }} | {{ x.datasets | join(", ") }} | {{ x.evidence | join(", ") }} |
 {% endfor %}
 {% else %}
 None.

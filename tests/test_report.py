@@ -517,6 +517,8 @@ def test_anonymised_source_ips_are_labelled(tmp_path: Path) -> None:
     html_iocs = html[html.index('<h2 id="iocs">') : html.index('<h2 id="limitations">')]
     assert f'<div class="warning" role="alert">{IP_WARNING}<br>' in html_iocs
     assert all(x["anonymised"] for x in report.model["iocs"]["source_ips"]["rows"])
+    # Whether a random replacement address is public says nothing; it is not shown.
+    assert "| 203.0.113.10 | yes | n/a | 17 |" in iocs
     limitations = " ".join(s["text"] for s in report.model["limitations"])
     assert "wernicke" in limitations
 
