@@ -246,6 +246,155 @@ defined in the review file) are set by hand in `evaluation/fp_review.yml`, and
 `ctinv evaluate --db` refuses to summarise them if the database no longer
 yields exactly the reviewed findings.
 
+## Results (2026-10-16)
+
+`ctinv evaluate` with the rules at `rules-frozen-for-eval`: 28 s, peak memory
+0.35 GB for both sets. A second run gave identical results apart from the
+timestamp. The development set gave exactly the same 22 findings (same IDs) in
+its own database as in a database shared with flaws.cloud.
+
+### Test set (held out): 9 / 23 in-scope ATT&CK techniques detected
+
+27 techniques are labelled; 4 are excluded as label ambiguous (none as out of
+scope by design).
+
+| Variant | Detected |
+|---|---|
+| **Main result** | **9 / 23** |
+| Without the two techniques exposed before the split | 8 / 21 |
+| By a rule mapped to the same technique (or its parent or sub-technique) | 5 / 23 |
+| Every in-scope file of the technique detected | 6 / 23 |
+| Without separately reported rule parts | 9 / 23 |
+| Every record kept (reused eventIDs made unique) | 9 / 23 |
+| Excluded techniques counted as missed | 9 / 27 |
+
+| ATT&CK v20.0 | Name | Result | Rules that fired | Files detected | First finding | Note |
+|---|---|---|---|---|---|---|
+| T1021.004 | SSH | missed | – | 0 / 1 | – |  |
+| T1021.008 | Direct Cloud VM Connections | missed | – | 0 / 1 | – |  |
+| T1078 | Valid Accounts | detected | `console-login-without-mfa`, `credentials-created-for-other-user` | 2 / 6 | +0 s |  |
+| T1078.004 | Cloud Accounts | detected | `console-login-without-mfa`, `root-account-usage` | 1 / 1 | +0 s |  |
+| T1087.004 | Cloud Account | label ambiguous | – | – | – | no file with a matching label (see the label review) |
+| T1098 | Account Manipulation | missed | – | 0 / 3 | – |  |
+| T1098.003 | Additional Cloud Roles | missed | – | 0 / 1 | – |  |
+| T1110.001 | Password Guessing | missed | – | 0 / 1 | – |  |
+| T1110.002 | Password Cracking | label ambiguous | – | – | – | no file with a matching label (see the label review) |
+| T1110.003 | Password Spraying | missed | – | 0 / 2 | – |  |
+| T1119 | Automated Collection | missed | – | 0 / 1 | – |  |
+| T1201 | Password Policy Discovery | detected | `root-account-usage` | 1 / 1 | +0 s to +76 min | exposed before the split |
+| T1204 | User Execution | label ambiguous | – | – | – | no file with a matching label (see the label review) |
+| T1204.003 | Malicious Image | missed | – | 0 / 1 | – | exposed before the split |
+| T1485 | Data Destruction | missed | – | 0 / 1 | – |  |
+| T1486 | Data Encrypted for Impact | missed | – | 0 / 1 | – |  |
+| T1526 | Cloud Service Discovery | detected | `access-denied-spike`, `discovery-burst` | 1 / 1 | +0 s to +3 min |  |
+| T1530 | Data from Cloud Storage | missed | – | 0 / 1 | – |  |
+| T1537 | Transfer Data to Cloud Account | detected | `snapshot-or-image-shared` | 2 / 2 | +0 s |  |
+| T1552 | Unsecured Credentials | detected | `access-denied-spike` | 1 / 1 | +0 s to +1 s |  |
+| T1555.006 | Cloud Secrets Management Stores | missed | – | 0 / 1 | – |  |
+| T1578.005 | Modify Cloud Compute Configurations | missed | – | 0 / 1 | – |  |
+| T1580 | Cloud Infrastructure Discovery | detected | `access-denied-spike`, `discovery-burst` | 2 / 3 | +0 s to +4 min |  |
+| T1586.003 | Cloud Accounts | label ambiguous | – | – | – | no file with a matching label (see the label review); fired on its excluded file: `console-login-without-mfa`, `root-account-usage` |
+| T1621 | Multi-Factor Authentication Request Generation | detected | `root-account-usage` | 1 / 1 | +0 s |  |
+| T1685.002 (formerly T1562.008) | Disable or Modify Cloud Log | detected | `cloudtrail-tampering` | 3 / 6 | +0 s |  |
+| T1686.001 (formerly T1562.007) | Cloud Firewall | missed | – | 0 / 1 | – |  |
+
+How to read it (interpretation of the findings' evidence):
+
+- **Four of the nine detections come from rules mapped to another technique.**
+  T1201 (password policy) and T1621 (failed MFA) are found only because those
+  scenarios were run as root (`root-account-usage`); T1526 (a security scanner)
+  and T1552 (`ec2:GetPasswordData`) through the burst and permission-error rules,
+  which are mapped to T1580. By a rule mapped to the technique itself: 5 / 23.
+- **The T1621 detection rests on failed root sign-ins**, which
+  `root-account-usage` counts as root activity. Its findings report them as
+  succeeded ("0 failed"): CloudTrail records a failed console sign-in in
+  `responseElements.ConsoleLogin` ("Failure"), not in `errorCode`, and the
+  framework derives a finding's outcome from `errorCode`. This is a known gap,
+  not fixed after the rules were frozen.
+- **14 in-scope techniques are missed.** For 13 of them no rule looks for the
+  behaviour in the scenario (SSH keys pushed through EC2 Instance Connect,
+  deleted IAM groups and policies, failed console sign-ins, DataSync tasks,
+  container images, Bedrock deletions, KMS key policies, CloudWatch Logs reads,
+  batch secret retrieval, user-data changes, network ACL entries). T1098.003 has
+  a rule (`admin-policy-attached`), but the scenario creates roles trusted by
+  other accounts, which that rule does not cover.
+- **T1685.002: 3 of 6 in-scope files.** `cloudtrail-tampering` finds the
+  `StopLogging`, `DeleteTrail` and `UpdateTrail` scenarios. It misses lifecycle
+  rules on buckets that the file never shows as trail buckets (a documented gap:
+  a trail bucket is only known from trail calls in the same data), deleted
+  GuardDuty detectors, WAF rules and a log stream, and a denied deletion of
+  Bedrock model invocation logging.
+- **Reused eventIDs** change no result.
+- Every detected technique's first evidence is the scenario's first event
+  (+0 s). Findings that span many events (bursts, a day of root activity) are
+  complete between 1 s and 76 minutes later.
+
+### Development set (optimistic): 15 / 26 in-scope Stratus techniques detected
+
+`ec2-user-data` is out of scope by design (never detonated).
+
+| Variant | Detected |
+|---|---|
+| **Main result** | **15 / 26** |
+| Strict (only documented technique calls count) | 15 / 26 |
+| By a rule mapped to the technique's stated ATT&CK ID (techniques with one) | 6 / 12 |
+| Without separately reported rule parts (`rds-share-snapshot` is found only by the RDS part) | 14 / 26 |
+| Failed attempts detected (every attack call returned an error) | 2 / 3 |
+
+| Stratus technique | ATT&CK v20.0 | Result | Strict | Attempt failed | Rules that fired | First finding |
+|---|---|---|---|---|---|---|
+| `aws.credential-access.ec2-get-password-data` | – | detected | yes | no | `access-denied-spike` | +5 s to +8 s |
+| `aws.credential-access.ec2-steal-instance-credentials` | T1552.005 | detected | yes | no | `discovery-burst` | −2 min to +22 min |
+| `aws.credential-access.secretsmanager-retrieve-secrets` | – | detected | yes | no | `discovery-burst` | −3 min to +21 min |
+| `aws.credential-access.ssm-retrieve-securestring-parameters` | – | detected | yes | no | `discovery-burst` | −4 min to +20 min |
+| `aws.defense-evasion.cloudtrail-delete` | T1685.002 (formerly T1562.008) | detected | yes | yes | `cloudtrail-tampering` | +0 s |
+| `aws.defense-evasion.cloudtrail-event-selectors` | T1685.002 (formerly T1562.008) | detected | yes | no | `cloudtrail-tampering` | +0 s |
+| `aws.defense-evasion.cloudtrail-lifecycle-rule` | T1685.002 (formerly T1562.008) | detected | yes | no | `cloudtrail-tampering` | +0 s |
+| `aws.defense-evasion.cloudtrail-stop` | T1685.002 (formerly T1562.008) | detected | yes | yes | `cloudtrail-tampering` | +0 s |
+| `aws.defense-evasion.organizations-leave` | – | missed | no | no | – | – |
+| `aws.defense-evasion.vpc-remove-flow-logs` | – | missed | no | no | – | – |
+| `aws.discovery.ec2-download-user-data` | – | missed | no | no | – | – |
+| `aws.discovery.ec2-enumerate-from-instance` | – | missed | no | yes | – | – |
+| `aws.execution.ec2-launch-unusual-instances` | T1578.002 | missed | no | no | – | – |
+| `aws.execution.ec2-user-data` | – | out of scope | – | no | – | – |
+| `aws.exfiltration.ec2-security-group-open-port-22-ingress` | T1686.001 (formerly T1562.007) | missed | no | no | – | – |
+| `aws.exfiltration.ec2-share-ami` | – | detected | yes | no | `snapshot-or-image-shared` | +0 s |
+| `aws.exfiltration.ec2-share-ebs-snapshot` | T1578.001 | detected | yes | no | `snapshot-or-image-shared` | +0 s |
+| `aws.exfiltration.rds-share-snapshot` | – | detected (RDS part only) | yes | no | `snapshot-or-image-shared` | +0 s |
+| `aws.exfiltration.s3-backdoor-bucket-policy` | – | missed | no | no | – | – |
+| `aws.initial-access.console-login-without-mfa` | – | detected | yes | no | `console-login-without-mfa` | +0 s |
+| `aws.persistence.iam-backdoor-role` | T1098.003 | missed | no | no | – | – |
+| `aws.persistence.iam-backdoor-user` | T1098.001 | detected | yes | no | `credentials-created-for-other-user` | +0 s |
+| `aws.persistence.iam-create-admin-user` | T1136.003 | detected | yes | no | `admin-policy-attached`, `credentials-created-for-other-user` | +0 s |
+| `aws.persistence.iam-create-user-login-profile` | T1098.001 | detected | yes | no | `credentials-created-for-other-user`, `discovery-burst` | −6 min to +0 s |
+| `aws.persistence.lambda-backdoor-function` | – | missed | no | no | – | – |
+| `aws.persistence.lambda-overwrite-code` | – | missed | no | no | – | – |
+| `aws.persistence.rolesanywhere-create-trust-anchor` | – | missed | no | no | – | – |
+
+- 22 findings: 17 rest on attack events, 5 only on lab scaffolding (2 warm-up,
+  1 revert, 2 clean-up), none only on background events. The 5 count neither as
+  true nor as false positives.
+- **Observation after the run, not a variant fixed in advance:** three
+  credential-access techniques (`ec2-steal-instance-credentials`,
+  `secretsmanager-retrieve-secrets`, `ssm-retrieve-securestring-parameters`)
+  count as detected only through one `discovery-burst` finding with 1,337
+  evidence events: 60 attack calls, 1,225 lab set-up and clean-up events and 52
+  background events. That meets the scoring rule, but the burst is mostly
+  Terraform; without these three, 12 / 26.
+- The test-set and development-set rates use different units (ATT&CK techniques
+  vs. Stratus techniques) and different data; they are not comparable and are
+  not combined.
+
+### Manually reviewed sample (flaws.cloud)
+
+65 findings were drawn (seed `ctinv-review-1`, up to 10 per rule): all findings
+of `admin-policy-attached` (1), `cloudtrail-tampering` (3),
+`console-login-without-mfa` (1) and `credentials-created-for-other-user` (10),
+and 10 each of `access-denied-spike` (540), `discovery-burst` (332),
+`new-region-activity` (15), `root-account-usage` (69) and
+`snapshot-or-image-shared` (37). The labels in `evaluation/fp_review.yml` are
+not set yet.
+
 ## Limitations
 
 - **The choice of rules was not blind to the test set's techniques.** Splunk's
