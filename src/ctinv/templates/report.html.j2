@@ -1,0 +1,295 @@
+{#- HTML report. Autoescaping is on: every {{ value }} is HTML-escaped. -#}
+{% macro ev(ids) %}{% for id in ids %}<a class="ev" href="#ev-{{ r.evidence_index[id] }}">{{ id }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endmacro %}
+{% macro cut(part, what) %}{% if part.total > part.rows | length %}<p class="note">Showing the first {{ part.rows | length | num }} of {{ part.total | num }} {{ what }}; the JSON file lists all.</p>{% endif %}{% endmacro %}
+{% macro outcome(name) %}<span class="o-{{ name }}">{{ name }}</span>{% endmacro %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>{{ r.title }}</title>
+<style>
+:root {
+  --bg: #ffffff; --fg: #1d1f23; --muted: #5d6470; --line: #d9dde3; --head: #f3f5f8;
+  --link: #0b57d0; --ok: #1a7f37; --denied: #c62828; --failed: #a15c00;
+  --warn-bg: #fff4e5; --warn-line: #e08a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171a; --fg: #e6e8eb; --muted: #9aa3ad; --line: #343a42; --head: #1e2227;
+    --link: #8ab4f8; --ok: #57c26a; --denied: #f28b82; --failed: #f6b26b;
+    --warn-bg: #3a2a10; --warn-line: #f6b26b;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+main { max-width: 1400px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.6rem; margin: 0 0 12px; overflow-wrap: anywhere; }
+h2 { font-size: 1.25rem; margin: 40px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+h3 { font-size: 1.05rem; margin: 24px 0 8px; }
+p, li { overflow-wrap: anywhere; }
+a { color: var(--link); }
+.meta { color: var(--muted); padding-left: 1.2em; }
+.note { color: var(--muted); font-size: 0.9rem; }
+.scroll { overflow-x: auto; margin: 8px 0 16px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+th, td { border: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; }
+th { background: var(--head); white-space: nowrap; }
+td { overflow-wrap: anywhere; min-width: 4em; }
+td.n { text-align: right; white-space: nowrap; }
+td.t, td.v { white-space: nowrap; }
+code, .ev, .id { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; }
+.ev { white-space: nowrap; }
+.o-succeeded { color: var(--ok); } .o-denied { color: var(--denied); } .o-failed { color: var(--failed); }
+.warning { background: var(--warn-bg); border-left: 4px solid var(--warn-line);
+  padding: 10px 14px; margin: 12px 0; font-weight: 600; }
+.summary li { margin-bottom: 8px; }
+.evidence { color: var(--muted); font-size: 0.85rem; }
+ul.graph { list-style: none; padding-left: 0; }
+ul.graph li { margin: 8px 0; padding-left: 0.8em; border-left: 2px solid var(--line); }
+.details { color: var(--muted); font-size: 0.9rem; }
+tr:target { outline: 2px solid var(--link); }
+details > summary { cursor: pointer; font-weight: 600; }
+@media print { .scroll { overflow: visible; } a { color: inherit; } }
+</style>
+</head>
+<body>
+<main>
+<h1>{{ r.title }}</h1>
+<ul class="meta">
+<li>Generated {{ r.generated_at | time }} UTC by ctinv {{ r.ctinv_version }}</li>
+<li>Database: {{ r.database }}</li>
+{% for name, value in r.scope.items() %}
+<li>{{ name | replace("_", " ") | capitalize }}: {{ value }}</li>
+{% endfor %}
+<li>Account IDs and access keys: {{ "masked as ACCOUNT-n and AKIA-KEY-n / ASIA-KEY-n, consistently within this report" if r.redacted else "as in the data" }}</li>
+<li>Full detail: {{ r.json_file }}</li>
+<li>All times are UTC. Evidence links go to the evidence index at the end.</li>
+</ul>
+
+<h2 id="summary">Executive summary</h2>
+<ul class="summary">
+{% for s in r.summary %}
+<li>{{ s.text }}{% if s.evidence %} <span class="evidence">Evidence: {{ ev(s.evidence) }}</span>{% endif %}</li>
+{% endfor %}
+</ul>
+
+<h2 id="timeline">Timeline</h2>
+<h3>Key moments</h3>
+{% if r.kind == "investigation" %}
+<p>Each credential issuance (and failed credential request), the first use of each key, the first successful call, the first burst of denied and of failed calls (at least {{ r.moments.burst_events }} within {{ r.moments.burst_seconds }} seconds), and each finding.</p>
+{% else %}
+<p>Each finding at its first evidence event.</p>
+{% endif %}
+{{ cut(r.moments, "moments") }}
+{% if r.moments.rows %}
+<div class="scroll"><table>
+<thead><tr><th>Time</th><th>Moment</th><th>Session</th><th>What happened</th><th>Evidence</th></tr></thead>
+<tbody>
+{% for m in r.moments.rows %}
+<tr><td class="t">{{ m.time | time }}</td><td>{{ m.kind }}</td><td>{{ m.session }}</td><td>{{ m.text }}</td><td>{{ ev(m.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p>None.</p>
+{% endif %}
+
+{% if r.periods is not none %}
+<h3>Activity periods</h3>
+<p>Calls of one session to one API with the same outcome form one period while no gap between them exceeds {{ r.periods.gap_seconds | duration }}. Other calls can happen in between, so periods may overlap.</p>
+{{ cut(r.periods, "periods (in time order)") }}
+<div class="scroll"><table>
+<thead><tr><th>First – last</th><th>Session</th><th>API</th><th>Outcome</th><th>Events</th><th>Regions</th><th>Error codes</th><th>Evidence (first, last)</th></tr></thead>
+<tbody>
+{% for p in r.periods.rows %}
+<tr><td class="t">{{ p.first_seen | span(p.last_seen) }}</td><td>{{ p.session }}</td><td>{{ p.api }}</td><td>{{ outcome(p.outcome) }}</td><td class="n">{{ p.events | num }}</td><td>{{ p.regions | some(5) }}</td><td>{% for c in p.error_codes[:3] %}{{ c.code }} ({{ c.events | num }}){% if not loop.last %}, {% endif %}{% endfor %}{% if p.error_codes | length > 3 %}, +{{ p.error_codes | length - 3 }} more{% endif %}</td><td>{{ ev(p.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% endif %}
+
+<h2 id="findings">Findings by ATT&amp;CK tactic</h2>
+{% if r.findings.status == "not_run" %}
+<p>Detection has not been run on this database, so findings are unknown.</p>
+{% elif r.findings.status == "none" %}
+<p>No detection finding has evidence in these events.</p>
+{% else %}
+<p>{{ r.findings.total | count("finding") }} of {{ r.findings.rules | count("rule") }}, grouped by MITRE ATT&amp;CK Enterprise v20.0 tactic; a finding is listed under each tactic of its rule. Technique IDs that changed with ATT&amp;CK v19 are shown with their former ID.</p>
+{% for t in r.findings.tactics %}
+<h3>{{ t.name }}: {{ t.total | count("finding") }} ({{ t.rules | join(", ") }})</h3>
+<div class="scroll"><table>
+<thead><tr><th>First – last seen</th><th>Rule</th><th>Technique</th><th>Severity</th><th>Principal</th><th>Summary</th><th>Outcome</th><th>Evidence events</th><th>Evidence (first)</th></tr></thead>
+<tbody>
+{% for f in t.rows %}
+<tr><td class="t">{{ f.first_seen | span(f.last_seen) }}</td><td>{{ f.rule_id }}</td><td>{{ f.technique }} {{ f.technique_name }}</td><td>{{ f.severity }}</td><td>{{ f.principal }}</td><td>{{ f.summary }}</td><td>{{ f.outcome }}</td><td class="n">{{ f.evidence_here | num }}{% if f.evidence_here != f.evidence_count %} of {{ f.evidence_count | num }}{% endif %}</td><td>{{ ev(f.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{{ cut(t, "findings of this tactic") }}
+{% endfor %}
+{% endif %}
+
+<h2 id="graph">Session graph</h2>
+{% if r.graph is none %}
+<p>Not part of a findings report: an investigation report follows one identity and the credentials it obtained.</p>
+{% else %}
+<p>{{ r.graph.sessions | count("session") }}, up to {{ r.graph.deepest | count("pivot") }} deep. A session is the starting identity (S0) or a key it obtained; a pivot is the credential-issuing call that links them. Evidence: the issuing call, the call that created or issued the key, and the session's first and last event.</p>
+<ul class="graph">
+{% for n in r.graph.tree %}
+{% if n.more %}
+<li style="margin-left: {{ n.level * 1.5 }}em">{{ n.more | count("more session") }} obtained here: see the JSON file.</li>
+{% else %}
+<li style="margin-left: {{ n.level * 1.5 }}em"><strong>{{ n.label }}</strong>: {{ n.kind }} <span class="id">{{ n.id }}</span>{% if n.via %}, obtained in {{ n.via.from }} via {{ n.via.api }}{% if n.via.target %} for {{ n.via.target }}{% endif %} at {{ n.via.time | time }}{% endif %}
+<div class="details">{{ n.events | count("event") }} ({{ outcome("succeeded") }} {{ n.succeeded | num }}, {{ outcome("denied") }} {{ n.denied | num }}, {{ outcome("failed") }} {{ n.failed | num }}), {{ n.first_seen | span(n.last_seen) }}<br>
+{% for o in n.issued_by %}
+Key {{ "created" if o.api == "iam:CreateAccessKey" else "issued" }} by {{ o.api }}, called by {{ o.caller }} at {{ o.event_time | time }}<br>
+{% endfor %}
+Identities: {{ n.identities | top }}<br>
+Source IPs: {{ n.source_ips | top }}{% if r.ip_warning %} (anonymised by the dataset publisher, see the indicators){% endif %}<br>
+User agents: {{ n.user_agents | top }}<br>
+Regions: {{ n.regions | top }}<br>
+Evidence: {{ ev(n.evidence) }}</div></li>
+{% endif %}
+{% endfor %}
+</ul>
+{% if r.graph.not_followed %}
+<p>Credential calls that did not lead to a new session:</p>
+<div class="scroll"><table>
+<thead><tr><th>Status</th><th>API</th><th>Calls</th><th>Meaning</th><th>Evidence (first)</th></tr></thead>
+<tbody>
+{% for g in r.graph.not_followed %}
+<tr><td>{{ g.status }}</td><td>{{ g.api }}</td><td class="n">{{ g.calls | num }}</td><td>{{ g.meaning }}</td><td>{{ ev(g.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% endif %}
+{% endif %}
+
+<h2 id="blast">Blast radius</h2>
+{% if r.blast is none %}
+<p>Not part of a findings report: an investigation report lists the resources one identity's calls named.</p>
+{% elif not r.blast.resources %}
+<p>The events name no resource.</p>
+{% else %}
+<p>{{ r.blast.resources | count("resource") }} named in {{ r.blast.services | length | count("service") }}: {{ r.blast.with_success | num }} with at least one successful call, {{ r.blast.attempted_only | num }} only in denied or failed calls. A resource is what a call names (in its resources field or a request parameter), not necessarily what it changed. Evidence: the first event per outcome.</p>
+{% for s in r.blast.services %}
+<h3>{{ s.service }}: {{ s.resources | count("resource") }} ({{ s.succeeded_resources | num }} with a successful call, {{ s.denied_resources | num }} with a denied call, {{ s.failed_resources | num }} with a failed call)</h3>
+<div class="scroll"><table>
+<thead><tr><th>Type</th><th>Resource</th><th>Events</th><th>Succeeded</th><th>Denied</th><th>Failed</th><th>APIs</th><th>First – last</th><th>Evidence</th></tr></thead>
+<tbody>
+{% for x in s.rows %}
+<tr><td>{{ x.type }}</td><td>{{ x.resource }}</td><td class="n">{{ x.events | num }}</td><td class="n">{{ x.succeeded | num }}</td><td class="n">{{ x.denied | num }}</td><td class="n">{{ x.failed | num }}</td><td>{{ x.apis | join(", ") }}{% if x.more_apis %}, +{{ x.more_apis }} more{% endif %}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ ev(x.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% if s.resources > s.rows | length %}<p class="note">{{ (s.resources - s.rows | length) | num }} more resources of this service are in the JSON file.</p>{% endif %}
+{% endfor %}
+{% endif %}
+{% if r.blast is not none and r.blast.without_resource.events %}
+<p>{{ r.blast.without_resource.events | num }} events name no resource, for example:</p>
+<div class="scroll"><table>
+<thead><tr><th>API</th><th>Events</th><th>Evidence (first)</th></tr></thead>
+<tbody>
+{% for a in r.blast.without_resource.apis %}
+<tr><td>{{ a.api }}</td><td class="n">{{ a.events | num }}</td><td>{{ ev(a.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% endif %}
+
+<h2 id="iocs">Indicators (IOCs)</h2>
+{% if r.ip_warning %}
+<div class="warning" role="alert">{{ r.ip_warning.text }}<br><span class="note">Dataset: {{ r.ip_warning.datasets | join(", ") }}. See the limitations of the data.</span></div>
+{% endif %}
+<p>Values as logged, by number of events. Evidence: the first and the last event with the value.</p>
+
+<h3>Source IP addresses{% if r.ip_warning %} (anonymised by the dataset publisher){% endif %}</h3>
+{{ cut(r.iocs.source_ips, "addresses") }}
+{% if r.iocs.source_ips.rows %}
+<div class="scroll"><table>
+<thead><tr><th>IP address</th><th>Anonymised</th><th>Public</th><th>Events</th><th>First – last seen</th><th>Sessions</th><th>Datasets</th><th>Evidence</th></tr></thead>
+<tbody>
+{% for x in r.iocs.source_ips.rows %}
+<tr><td class="v"><code>{{ x.value }}</code></td><td>{{ "yes" if x.anonymised else "no" }}</td><td>{{ "yes" if x.scope == "public" else "no" }}</td><td class="n">{{ x.events | num }}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ x.sessions | some(5) }}</td><td class="v">{{ x.datasets | join(", ") }}</td><td>{{ ev(x.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p>None.</p>
+{% endif %}
+
+<h3>Other source addresses (AWS services and internal callers)</h3>
+{{ cut(r.iocs.other_sources, "values") }}
+{% if r.iocs.other_sources.rows %}
+<div class="scroll"><table>
+<thead><tr><th>Source</th><th>Events</th><th>First – last seen</th><th>Sessions</th><th>Evidence</th></tr></thead>
+<tbody>
+{% for x in r.iocs.other_sources.rows %}
+<tr><td><code>{{ x.value }}</code></td><td class="n">{{ x.events | num }}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ x.sessions | some(5) }}</td><td>{{ ev(x.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p>None.</p>
+{% endif %}
+
+<h3>User agents</h3>
+{{ cut(r.iocs.user_agents, "user agents") }}
+{% if r.iocs.user_agents.rows %}
+<div class="scroll"><table>
+<thead><tr><th>User agent</th><th>Events</th><th>First – last seen</th><th>Sessions</th><th>Evidence</th></tr></thead>
+<tbody>
+{% for x in r.iocs.user_agents.rows %}
+<tr><td><code title="{{ x.value }}">{{ x.value | truncate(300, true, "…", 0) }}</code></td><td class="n">{{ x.events | num }}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ x.sessions | some(5) }}</td><td>{{ ev(x.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p>None.</p>
+{% endif %}
+
+<h3>Access keys</h3>
+{{ cut(r.iocs.access_keys, "keys") }}
+{% if r.iocs.access_keys.rows %}
+<div class="scroll"><table>
+<thead><tr><th>Access key ID</th><th>Kind</th><th>Events</th><th>First – last seen</th><th>Sessions</th><th>Evidence</th></tr></thead>
+<tbody>
+{% for x in r.iocs.access_keys.rows %}
+<tr><td class="v"><code>{{ x.value }}</code></td><td class="v">{{ x.kind }}</td><td class="n">{{ x.events | num }}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ x.sessions | some(5) }}</td><td>{{ ev(x.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p>None.</p>
+{% endif %}
+
+<h3>ARNs</h3>
+{{ cut(r.iocs.arns, "ARNs") }}
+{% if r.iocs.arns.rows %}
+<div class="scroll"><table>
+<thead><tr><th>ARN</th><th>Seen as</th><th>Events</th><th>First – last seen</th><th>Sessions</th><th>Evidence</th></tr></thead>
+<tbody>
+{% for x in r.iocs.arns.rows %}
+<tr><td><code>{{ x.value }}</code></td><td>{{ x.seen_as }}</td><td class="n">{{ x.events | num }}</td><td class="t">{{ x.first_seen | span(x.last_seen) }}</td><td>{{ x.sessions | some(5) }}</td><td>{{ ev(x.evidence) }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p>None.</p>
+{% endif %}
+
+<h2 id="limitations">Limitations of the data</h2>
+<ul>
+{% for s in r.limitations %}
+<li>{{ s.text }}{% if s.evidence %} <span class="evidence">Evidence: {{ ev(s.evidence) }}</span>{% endif %}</li>
+{% endfor %}
+</ul>
+
+<h2 id="evidence">Evidence index</h2>
+<p>Every eventID cited in this report ({{ r.evidence | length | num }}), in time order. The source file and record number locate the original record.</p>
+<details open>
+<summary>{{ r.evidence | length | num }} events</summary>
+<div class="scroll"><table>
+<thead><tr><th>#</th><th>eventID</th><th>Time</th><th>Session</th><th>API</th><th>Region</th><th>Caller</th><th>Source IP</th><th>User agent</th><th>Outcome</th><th>Error code</th><th>Dataset</th><th>Source file (record)</th></tr></thead>
+<tbody>
+{% for e in r.evidence %}
+<tr id="ev-{{ e.n }}"><td class="n">{{ e.n }}</td><td class="id">{{ e.event_id }}</td><td class="t">{{ e.event_time | time }}</td><td>{{ e.session }}</td><td>{{ e.api }}</td><td>{{ e.region }}</td><td>{{ e.caller }}</td><td class="v">{{ e.source_ip }}</td><td>{{ e.user_agent }}</td><td>{{ outcome(e.outcome) }}</td><td>{{ e.error_code }}</td><td class="v">{{ e.dataset }}</td><td>{{ e.source_file }} ({{ e.source_index }})</td></tr>
+{% endfor %}
+</tbody></table></div>
+</details>
+</main>
+</body>
+</html>

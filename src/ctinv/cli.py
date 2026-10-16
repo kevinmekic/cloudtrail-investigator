@@ -226,13 +226,24 @@ def _configure_investigate(sub: argparse.ArgumentParser) -> None:
         "--db", type=Path, default=Path("ctinv.duckdb"), help="DuckDB file (default: ctinv.duckdb)"
     )
     start = sub.add_mutually_exclusive_group(required=True)
-    start.add_argument("--access-key", metavar="ID", help="start from this access key ID")
-    start.add_argument(
+    _add_start_options(start)
+    _add_investigation_options(sub)
+    sub.add_argument(
+        "--output", "-o", type=Path, metavar="FILE", help="write the investigation as JSON to FILE"
+    )
+
+
+def _add_start_options(group: argparse._MutuallyExclusiveGroup) -> None:
+    group.add_argument("--access-key", metavar="ID", help="start from this access key ID")
+    group.add_argument(
         "--principal",
         metavar="ARN",
         help="start from this principal (userIdentity.arn); a role ARN stands for every "
         "session of the role",
     )
+
+
+def _add_investigation_options(sub: argparse.ArgumentParser) -> None:
     sub.add_argument(
         "--from",
         dest="start",
@@ -271,15 +282,27 @@ def _configure_investigate(sub: argparse.ArgumentParser) -> None:
         help="also follow long-term keys created with iam:CreateAccessKey (often handed "
         "to someone else, so off by default)",
     )
-    sub.add_argument(
-        "--output", "-o", type=Path, metavar="FILE", help="write the investigation as JSON to FILE"
+
+
+def _scope(args: argparse.Namespace):
+    from ctinv.investigate import Scope
+
+    return Scope(
+        access_key=args.access_key,
+        principal=args.principal,
+        start=args.start,
+        end=args.end,
+        max_depth=args.max_depth,
+        max_sessions=args.max_sessions,
+        max_events=args.max_events,
+        follow_created_keys=args.follow_created_keys,
     )
 
 
 def _run_investigate(args: argparse.Namespace) -> int:
     from rich.console import Console
 
-    from ctinv.investigate import InvestigationError, Scope, investigate, write_json
+    from ctinv.investigate import InvestigationError, investigate, write_json
     from ctinv.schema import connect
     from ctinv.summary import print_investigation
 
@@ -288,16 +311,7 @@ def _run_investigate(args: argparse.Namespace) -> int:
         err.print(f"[red]error:[/red] database {args.db} not found; run ctinv ingest first")
         return 2
     try:
-        scope = Scope(
-            access_key=args.access_key,
-            principal=args.principal,
-            start=args.start,
-            end=args.end,
-            max_depth=args.max_depth,
-            max_sessions=args.max_sessions,
-            max_events=args.max_events,
-            follow_created_keys=args.follow_created_keys,
-        )
+        scope = _scope(args)
     except InvestigationError as exc:
         err.print(f"[red]error:[/red] {exc}", highlight=False)
         return 2
@@ -318,11 +332,124 @@ def _run_investigate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _configure_report(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument(
+        "--db", type=Path, default=Path("ctinv.duckdb"), help="DuckDB file (default: ctinv.duckdb)"
+    )
+    start = sub.add_mutually_exclusive_group(required=True)
+    _add_start_options(start)
+    start.add_argument(
+        "--findings",
+        action="store_true",
+        help="report the findings of ctinv detect instead of an investigation",
+    )
+    _add_investigation_options(sub)
+    sub.add_argument(
+        "--rule",
+        action="append",
+        metavar="ID",
+        help="with --findings: only this rule's findings (repeatable)",
+    )
+    sub.add_argument(
+        "--redact",
+        action="store_true",
+        help="mask account IDs and access keys consistently (ACCOUNT-n, AKIA-KEY-n) in "
+        "all output files",
+    )
+    sub.add_argument(
+        "--out-dir",
+        type=Path,
+        default=Path("reports"),
+        metavar="DIR",
+        help="write <kind>-<UTC time>.md, .html and .json here (default: reports)",
+    )
+    sub.add_argument(
+        "--max-rows",
+        type=_count_argument,
+        default=500,
+        metavar="N",
+        help="show at most N activity periods in the report (default: 500; the JSON has all)",
+    )
+    sub.add_argument(
+        "--period-gap",
+        type=_count_argument,
+        default=900,
+        metavar="SECONDS",
+        help="calls of one session to one API with one outcome form one activity period "
+        "while no gap exceeds SECONDS (default: 900)",
+    )
+
+
+def _run_report(args: argparse.Namespace) -> int:
+    from rich.console import Console
+    from rich.markup import escape
+
+    from ctinv.investigate import InvestigationError, investigate
+    from ctinv.report import (
+        Limits,
+        ReportError,
+        findings_report,
+        investigation_report,
+        write_report,
+    )
+    from ctinv.schema import connect
+
+    err = Console(stderr=True)
+    if not args.db.exists():
+        err.print(f"[red]error:[/red] database {args.db} not found; run ctinv ingest first")
+        return 2
+    if args.rule and not args.findings:
+        err.print("[red]error:[/red] --rule needs --findings")
+        return 2
+    limits = Limits(periods=args.max_rows)
+    try:
+        scope = None if args.findings else _scope(args)
+    except InvestigationError as exc:
+        err.print(f"[red]error:[/red] {exc}", highlight=False)
+        return 2
+    con = connect(args.db)
+    try:
+        ran = {row[0] for row in con.execute("SELECT DISTINCT rule_id FROM rule_runs").fetchall()}
+        unknown = sorted(set(args.rule or []) - ran)
+        if unknown:
+            err.print(
+                f"[red]error:[/red] no detection run for rule(s): {', '.join(unknown)}",
+                highlight=False,
+            )
+            return 2
+        if scope is None:
+            report = findings_report(con, str(args.db), args.rule, args.start, args.end, limits)
+        else:
+            inv = investigate(con, scope)
+            report = investigation_report(con, inv, str(args.db), limits, args.period_gap)
+    except (InvestigationError, ReportError) as exc:
+        err.print(f"[red]error:[/red] {exc}", highlight=False)
+        return 1
+    finally:
+        con.close()
+
+    paths = write_report(report, args.out_dir, args.redact)
+    out = Console()
+    out.print(f"[bold]{escape(report.model['title'])}[/bold]")
+    out.print("[bold]Executive summary[/bold]")
+    for statement in report.model["summary"]:
+        evidence = statement["evidence"]
+        out.print(
+            "- "
+            + escape(statement["text"])
+            + (f" [dim]Evidence: {escape(', '.join(evidence))}[/dim]" if evidence else ""),
+            highlight=False,
+        )
+    out.print("\nReport written to " + ", ".join(str(p) for p in paths), highlight=False)
+    return 0
+
+
 Handler = Callable[[argparse.Namespace], int]
 HANDLERS: dict[str, tuple[Callable[[argparse.ArgumentParser], None] | None, Handler]] = {
     "ingest": (_configure_ingest, _run_ingest),
     "detect": (_configure_detect, _run_detect),
     "investigate": (_configure_investigate, _run_investigate),
+    "report": (_configure_report, _run_report),
 }
 
 

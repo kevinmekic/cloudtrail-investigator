@@ -1,0 +1,231 @@
+{#- Markdown report. Every {{ value }} is escaped by render.md_escape; macros only
+    hold template text and numbers, so escaping their output again changes nothing. -#}
+{% macro cut(part, what) %}{% if part.total > part.rows | length %} (showing the first {{ part.rows | length | num }} of {{ part.total | num }} {{ what }}; the JSON file lists all){% endif %}{% endmacro %}
+# {{ r.title }}
+
+- Generated: {{ r.generated_at | time }} UTC by ctinv {{ r.ctinv_version }}
+- Database: {{ r.database }}
+{% for name, value in r.scope.items() %}
+- {{ name | replace("_", " ") | capitalize }}: {{ value }}
+{% endfor %}
+- Account IDs and access keys: {{ "masked as ACCOUNT-n and AKIA-KEY-n / ASIA-KEY-n, consistently within this report" if r.redacted else "as in the data" }}
+- Full detail: {{ r.json_file }}
+- All times are UTC. Evidence lists eventIDs; each is described in the evidence index at the end.
+
+## Executive summary
+
+{% for s in r.summary %}
+- {{ s.text }}{% if s.evidence %} Evidence: {{ s.evidence | join(", ") }}{% endif +%}
+{% endfor %}
+
+## Timeline
+
+### Key moments
+
+{% if r.kind == "investigation" %}
+Each credential issuance (and failed credential request), the first use of each key, the first successful call, the first burst of denied and of failed calls (at least {{ r.moments.burst_events }} within {{ r.moments.burst_seconds }} seconds), and each finding{{ cut(r.moments, "moments") }}.
+{% else %}
+Each finding at its first evidence event{{ cut(r.moments, "findings") }}.
+{% endif %}
+
+{% if r.moments.rows %}
+| Time | Moment | Session | What happened | Evidence |
+|---|---|---|---|---|
+{% for m in r.moments.rows %}
+| {{ m.time | time }} | {{ m.kind }} | {{ m.session }} | {{ m.text }} | {{ m.evidence | join(", ") }} |
+{% endfor %}
+{% else %}
+None.
+{% endif %}
+
+{% if r.periods is not none %}
+### Activity periods
+
+Calls of one session to one API with the same outcome form one period while no gap between them exceeds {{ r.periods.gap_seconds | duration }}. Other calls can happen in between, so periods may overlap{{ cut(r.periods, "periods, in time order") }}.
+
+| First – last | Session | API | Outcome | Events | Regions | Error codes | Evidence (first, last) |
+|---|---|---|---|---:|---|---|---|
+{% for p in r.periods.rows %}
+| {{ p.first_seen | span(p.last_seen) }} | {{ p.session }} | {{ p.api }} | {{ p.outcome }} | {{ p.events | num }} | {{ p.regions | some(5) }} | {{ p.error_codes | map(attribute="code") | list | some(3) }} | {{ p.evidence | join(", ") }} |
+{% endfor %}
+
+{% endif %}
+## Findings by ATT&CK tactic
+
+{% if r.findings.status == "not_run" %}
+Detection has not been run on this database, so findings are unknown.
+{% elif r.findings.status == "none" %}
+No detection finding has evidence in these events.
+{% else %}
+{{ r.findings.total | count("finding") }} of {{ r.findings.rules | count("rule") }}, grouped by MITRE ATT&CK Enterprise v20.0 tactic; a finding is listed under each tactic of its rule. Technique IDs that changed with ATT&CK v19 are shown with their former ID.
+
+{% for t in r.findings.tactics %}
+### {{ t.name }}: {{ t.total | count("finding") }} ({{ t.rules | join(", ") }})
+
+| First – last seen | Rule | Technique | Severity | Principal | Summary | Outcome | Evidence events | Evidence (first) |
+|---|---|---|---|---|---|---|---:|---|
+{% for f in t.rows %}
+| {{ f.first_seen | span(f.last_seen) }} | {{ f.rule_id }} | {{ f.technique }} {{ f.technique_name }} | {{ f.severity }} | {{ f.principal }} | {{ f.summary }} | {{ f.outcome }} | {{ f.evidence_here | num }}{% if f.evidence_here != f.evidence_count %} of {{ f.evidence_count | num }}{% endif %} | {{ f.evidence | join(", ") }} |
+{% endfor %}
+{% if t.total > t.rows | length %}
+
+{{ (t.total - t.rows | length) | num }} more findings of this tactic are in the JSON file.
+{% endif %}
+
+{% endfor %}
+{% endif %}
+## Session graph
+
+{% if r.graph is none %}
+Not part of a findings report: an investigation report follows one identity and the credentials it obtained.
+{% else %}
+{{ r.graph.sessions | count("session") }}, up to {{ r.graph.deepest | count("pivot") }} deep. A session is the starting identity (S0) or a key it obtained; a pivot is the credential-issuing call that links them. Evidence: the issuing call, the call that created or issued the key, and the session's first and last event.
+
+{% for n in r.graph.tree %}
+{% set pad = "  " * n.level %}
+{% if n.more %}
+{{ pad }}- {{ n.more | count("more session") }} obtained here: see the JSON file.
+{% else %}
+{{ pad }}- **{{ n.label }}**: {{ n.kind }} {{ n.id }}{% if n.via %}, obtained in {{ n.via.from }} via {{ n.via.api }}{% if n.via.target %} for {{ n.via.target }}{% endif %} at {{ n.via.time | time }}{% endif +%}
+{{ pad }}  - {{ n.events | count("event") }} ({{ n.succeeded | num }} succeeded, {{ n.denied | num }} denied, {{ n.failed | num }} failed), {{ n.first_seen | span(n.last_seen) }}
+{% for o in n.issued_by %}
+{{ pad }}  - Key {{ "created" if o.api == "iam:CreateAccessKey" else "issued" }} by {{ o.api }}, called by {{ o.caller }} at {{ o.event_time | time }}
+{% endfor %}
+{{ pad }}  - Identities: {{ n.identities | top }}
+{{ pad }}  - Source IPs: {{ n.source_ips | top }}{% if r.ip_warning %} (anonymised by the dataset publisher, see the indicators){% endif +%}
+{{ pad }}  - User agents: {{ n.user_agents | top }}
+{{ pad }}  - Regions: {{ n.regions | top }}
+{{ pad }}  - Evidence: {{ n.evidence | join(", ") }}
+{% endif %}
+{% endfor %}
+
+{% if r.graph.not_followed %}
+Credential calls that did not lead to a new session:
+
+| Status | API | Calls | Meaning | Evidence (first) |
+|---|---|---:|---|---|
+{% for g in r.graph.not_followed %}
+| {{ g.status }} | {{ g.api }} | {{ g.calls | num }} | {{ g.meaning }} | {{ g.evidence | join(", ") }} |
+{% endfor %}
+
+{% endif %}
+{% endif %}
+## Blast radius
+
+{% if r.blast is none %}
+Not part of a findings report: an investigation report lists the resources one identity's calls named.
+{% elif not r.blast.resources %}
+The events name no resource.
+{% else %}
+{{ r.blast.resources | count("resource") }} named in {{ r.blast.services | length | count("service") }}: {{ r.blast.with_success | num }} with at least one successful call, {{ r.blast.attempted_only | num }} only in denied or failed calls. A resource is what a call names (in its resources field or a request parameter), not necessarily what it changed. Evidence: the first event per outcome.
+
+{% for s in r.blast.services %}
+### {{ s.service }}: {{ s.resources | count("resource") }} ({{ s.succeeded_resources | num }} with a successful call, {{ s.denied_resources | num }} with a denied call, {{ s.failed_resources | num }} with a failed call)
+
+| Type | Resource | Events | Succeeded | Denied | Failed | APIs | First – last | Evidence |
+|---|---|---:|---:|---:|---:|---|---|---|
+{% for x in s.rows %}
+| {{ x.type }} | {{ x.resource }} | {{ x.events | num }} | {{ x.succeeded | num }} | {{ x.denied | num }} | {{ x.failed | num }} | {{ x.apis | join(", ") }}{% if x.more_apis %}, +{{ x.more_apis }} more{% endif %} | {{ x.first_seen | span(x.last_seen) }} | {{ x.evidence | join(", ") }} |
+{% endfor %}
+{% if s.resources > s.rows | length %}
+
+{{ (s.resources - s.rows | length) | num }} more resources of this service are in the JSON file.
+{% endif %}
+
+{% endfor %}
+{% endif %}
+{% if r.blast is not none and r.blast.without_resource.events %}
+{{ r.blast.without_resource.events | num }} events name no resource, for example:
+
+| API | Events | Evidence (first) |
+|---|---:|---|
+{% for a in r.blast.without_resource.apis %}
+| {{ a.api }} | {{ a.events | num }} | {{ a.evidence | join(", ") }} |
+{% endfor %}
+
+{% endif %}
+## Indicators (IOCs)
+
+{% if r.ip_warning %}
+> **{{ r.ip_warning.text }}**
+>
+> Dataset: {{ r.ip_warning.datasets | join(", ") }}. See the limitations of the data.
+
+{% endif %}
+Values as logged, by number of events. Evidence: the first and the last event with the value.
+
+### Source IP addresses{% if r.ip_warning %} (anonymised by the dataset publisher){% endif %}{{ cut(r.iocs.source_ips, "addresses") }}
+
+{% if r.iocs.source_ips.rows %}
+| IP address | Anonymised | Public | Events | First – last seen | Sessions | Datasets | Evidence |
+|---|---|---|---:|---|---|---|---|
+{% for x in r.iocs.source_ips.rows %}
+| {{ x.value }} | {{ "yes" if x.anonymised else "no" }} | {{ "yes" if x.scope == "public" else "no" }} | {{ x.events | num }} | {{ x.first_seen | span(x.last_seen) }} | {{ x.sessions | some(5) }} | {{ x.datasets | join(", ") }} | {{ x.evidence | join(", ") }} |
+{% endfor %}
+{% else %}
+None.
+{% endif %}
+
+### Other source addresses (AWS services and internal callers){{ cut(r.iocs.other_sources, "values") }}
+
+{% if r.iocs.other_sources.rows %}
+| Source | Events | First – last seen | Sessions | Evidence |
+|---|---:|---|---|---|
+{% for x in r.iocs.other_sources.rows %}
+| {{ x.value }} | {{ x.events | num }} | {{ x.first_seen | span(x.last_seen) }} | {{ x.sessions | some(5) }} | {{ x.evidence | join(", ") }} |
+{% endfor %}
+{% else %}
+None.
+{% endif %}
+
+### User agents{{ cut(r.iocs.user_agents, "user agents") }}
+
+{% if r.iocs.user_agents.rows %}
+| User agent | Events | First – last seen | Sessions | Evidence |
+|---|---:|---|---|---|
+{% for x in r.iocs.user_agents.rows %}
+| {{ x.value }} | {{ x.events | num }} | {{ x.first_seen | span(x.last_seen) }} | {{ x.sessions | some(5) }} | {{ x.evidence | join(", ") }} |
+{% endfor %}
+{% else %}
+None.
+{% endif %}
+
+### Access keys{{ cut(r.iocs.access_keys, "keys") }}
+
+{% if r.iocs.access_keys.rows %}
+| Access key ID | Kind | Events | First – last seen | Sessions | Evidence |
+|---|---|---:|---|---|---|
+{% for x in r.iocs.access_keys.rows %}
+| {{ x.value }} | {{ x.kind }} | {{ x.events | num }} | {{ x.first_seen | span(x.last_seen) }} | {{ x.sessions | some(5) }} | {{ x.evidence | join(", ") }} |
+{% endfor %}
+{% else %}
+None.
+{% endif %}
+
+### ARNs{{ cut(r.iocs.arns, "ARNs") }}
+
+{% if r.iocs.arns.rows %}
+| ARN | Seen as | Events | First – last seen | Sessions | Evidence |
+|---|---|---:|---|---|---|
+{% for x in r.iocs.arns.rows %}
+| {{ x.value }} | {{ x.seen_as }} | {{ x.events | num }} | {{ x.first_seen | span(x.last_seen) }} | {{ x.sessions | some(5) }} | {{ x.evidence | join(", ") }} |
+{% endfor %}
+{% else %}
+None.
+{% endif %}
+
+## Limitations of the data
+
+{% for s in r.limitations %}
+- {{ s.text }}{% if s.evidence %} Evidence: {{ s.evidence | join(", ") }}{% endif +%}
+{% endfor %}
+
+## Evidence index
+
+Every eventID cited in this report ({{ r.evidence | length | num }}), in time order. The source file and record number locate the original record.
+
+| # | eventID | Time | Session | API | Region | Caller | Source IP | User agent | Outcome | Error code | Dataset | Source file (record) |
+|---:|---|---|---|---|---|---|---|---|---|---|---|---|
+{% for e in r.evidence %}
+| {{ e.n }} | {{ e.event_id }} | {{ e.event_time | time }} | {{ e.session }} | {{ e.api }} | {{ e.region }} | {{ e.caller }} | {{ e.source_ip }} | {{ e.user_agent }} | {{ e.outcome }} | {{ e.error_code }} | {{ e.dataset }} | {{ e.source_file }} ({{ e.source_index }}) |
+{% endfor %}
