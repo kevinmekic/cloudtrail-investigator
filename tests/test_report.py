@@ -16,8 +16,11 @@ from ctinv.detect import parse_rule, run_rules
 from ctinv.investigate import Scope, investigate
 from ctinv.render import md_escape, render_html, render_markdown
 from ctinv.report import (
+    BURST_EVENTS,
+    BURST_SECONDS,
     DEFAULT_LIMITS,
     IP_WARNING,
+    PERIOD_GAP_SECONDS,
     Limits,
     Report,
     ReportError,
@@ -625,3 +628,18 @@ def test_cli_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["report", "--db", str(db), "--access-key", "AKIANOTINTHEDATA0000", *out]) == 1
     assert "no events" in capsys.readouterr().err
     assert not (tmp_path / "r").exists()
+
+
+def test_documented_defaults_match_the_code() -> None:
+    doc = (Path(__file__).resolve().parent.parent / "docs" / "REPORTING.md").read_text()
+    assert f"\n> {IP_WARNING}\n" in doc
+    assert f"first {BURST_SECONDS}-second window with at least {BURST_EVENTS} of them" in doc
+    assert f"no gap between them exceeds {PERIOD_GAP_SECONDS // 60} minutes" in doc
+    assert f"| `--period-gap SECONDS` | {PERIOD_GAP_SECONDS} |" in doc
+    limits = DEFAULT_LIMITS
+    assert f"| `--max-rows N` | {limits.periods} |" in doc
+    assert (
+        f"(activity periods {limits.periods}, key moments {limits.moments}, findings "
+        f"{limits.findings} per\ntactic, resources {limits.resources} per service, IOCs "
+        f"{limits.iocs} per kind, sessions {limits.children} per parent)"
+    ) in doc

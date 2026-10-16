@@ -231,6 +231,11 @@ Top-level keys: `format` (`ctinv-investigation/1`), `ctinv_version`,
 `Z`. The timeline is written one event per line so it stays greppable;
 `summary.timeline_truncated` says whether `--max-events` cut it.
 
+`ctinv report --access-key ...` or `--principal ...` writes the same JSON next
+to its Markdown and HTML report, with one more key, `report`
+(`ctinv-report/1`): all key moments, all activity periods, all indicators and
+the datasets involved. See [REPORTING.md](REPORTING.md).
+
 ## Example: flaws.cloud, the Level6 key on 21–22 August 2019
 
 The access key of the flaws.cloud challenge user `Level6` is public by design,

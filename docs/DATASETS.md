@@ -53,6 +53,16 @@ maintenance tool: run it only to move to a new upstream version, and review the
 lock diff before committing. How each source is verified at that point is
 described per dataset below.
 
+## Dataset properties used by reports
+
+What a report must say about a dataset is recorded as data in
+[`src/ctinv/datasets.yml`](../src/ctinv/datasets.yml), keyed by the dataset
+name: which fields the publisher anonymised (flaws.cloud: source IPs, account
+IDs, access keys), how, and the caveats listed under a report's limitations. A
+report on flaws.cloud events labels its IP indicators as anonymised by the
+publisher; see [`REPORTING.md`](REPORTING.md). A test keeps the registry's
+datasets, titles and source pages equal to the dataset lock file.
+
 ## flaws.cloud CloudTrail logs
 
 - **Source:** Summit Route (Scott Piper), released 2020-10-09.
