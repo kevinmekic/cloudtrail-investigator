@@ -77,3 +77,29 @@ def test_splunk_labels_hold_metadata_only() -> None:
     assert labels["event_content_read"] is False
     for entry in labels["files"]:
         assert set(entry) == SPLUNK_FILE_KEYS
+
+
+@pytest.mark.datasets
+def test_labels_rebuild_byte_identical(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The derivation in scripts/build_labels.py still yields exactly the frozen labels.
+
+    This guards the attribution logic end to end: any change to it that would
+    change a label fails here.
+    """
+    import build_labels
+
+    data = LABELS.parent / "data"
+    manifest = data / "MANIFEST.json"
+    datasets = json.loads(manifest.read_text())["datasets"] if manifest.exists() else {}
+    if not {"invictus_sigma_aws", "splunk_attack_data"} <= set(datasets):
+        pytest.skip("Invictus and Splunk datasets not fetched (scripts/fetch_datasets.py --all)")
+    names = ("invictus_labels.json", "splunk_labels.json")
+    monkeypatch.setattr(build_labels, "INVICTUS_OUT", tmp_path / names[0])
+    monkeypatch.setattr(build_labels, "SPLUNK_OUT", tmp_path / names[1])
+    monkeypatch.setattr(build_labels, "ROOT", tmp_path)  # it prints paths relative to ROOT
+    build_labels.build(data.resolve())
+    capsys.readouterr()  # the builder prints a summary
+    for name in names:
+        assert (tmp_path / name).read_bytes() == (LABELS / name).read_bytes(), name
