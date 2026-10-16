@@ -833,9 +833,9 @@ REVIEW_HEADER = """\
 #   false-positive        the evidence does not show the behaviour the rule
 #                         describes
 #   unclear               the logs do not allow a decision
-# and optionally a short `note`. Context for each finding (top APIs, source
-# addresses, user agents, errors) is in the review sheet that
-# `ctinv evaluate --db <database>` writes next to its results.
+# and optionally a short `note`. The summary and context of each finding (top
+# APIs, source addresses, user agents, errors) are in the review sheet that
+# `ctinv evaluate --db <database>` writes next to its results (git-ignored).
 """
 
 
@@ -845,9 +845,9 @@ def write_review_file(path: Path, sample: dict[str, Any]) -> None:
     document = {
         "sample": {k: sample[k] for k in ("dataset", "seed", "per_rule", "population")},
         "findings": [
+            # No summaries: some name source addresses, which stay in the review sheet.
             {
                 **{k: f[k] for k in ("finding_id", "rule_id", "principal", "first_seen")},
-                "summary": f["summary"],
                 "label": None,
                 "note": None,
             }
