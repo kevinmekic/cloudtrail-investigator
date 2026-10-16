@@ -32,25 +32,27 @@ import yaml
 from ctinv import macros
 
 SEVERITIES = ("low", "medium", "high", "critical")
-# Tactic short names of MITRE ATT&CK Enterprise v20.0 (Defense Evasion no longer
-# exists since v19; it was split into Stealth and Defense Impairment).
-TACTICS = (
-    "reconnaissance",
-    "resource-development",
-    "initial-access",
-    "execution",
-    "persistence",
-    "privilege-escalation",
-    "stealth",
-    "defense-impairment",
-    "credential-access",
-    "discovery",
-    "lateral-movement",
-    "collection",
-    "command-and-control",
-    "exfiltration",
-    "impact",
-)
+# Tactics of MITRE ATT&CK Enterprise v20.0 in matrix order, short name -> name
+# (Defense Evasion no longer exists since v19; it was split into Stealth and
+# Defense Impairment). A test checks this against the pinned bundle's snapshot.
+TACTIC_NAMES = {
+    "reconnaissance": "Reconnaissance",
+    "resource-development": "Resource Development",
+    "initial-access": "Initial Access",
+    "execution": "Execution",
+    "persistence": "Persistence",
+    "privilege-escalation": "Privilege Escalation",
+    "stealth": "Stealth",
+    "defense-impairment": "Defense Impairment",
+    "credential-access": "Credential Access",
+    "discovery": "Discovery",
+    "lateral-movement": "Lateral Movement",
+    "collection": "Collection",
+    "command-and-control": "Command and Control",
+    "exfiltration": "Exfiltration",
+    "impact": "Impact",
+}
+TACTICS = tuple(TACTIC_NAMES)
 OUTPUT_COLUMNS = {"principal": "VARCHAR", "summary": "VARCHAR", "evidence_event_ids": "VARCHAR[]"}
 _RULE_ID = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 _TECHNIQUE_ID = re.compile(r"T\d{4}(\.\d{3})?")

@@ -3,9 +3,11 @@
 
 The rule metadata test checks each rule's technique ID, name, tactics and former
 IDs against this snapshot, so a typo or an outdated mapping fails the test suite
-offline. The entries come from the same hash-pinned ATT&CK Enterprise v20.0
-bundle as labels/sources.json (which only covers techniques named by the dataset
-labels). Re-run this script after adding a rule with a new technique:
+offline. The snapshot also lists every Enterprise tactic (short name and name,
+in matrix order), which reports use as headings. The entries come from the same
+hash-pinned ATT&CK Enterprise v20.0 bundle as labels/sources.json (which only
+covers techniques named by the dataset labels). Re-run this script after adding
+a rule with a new technique:
 
     python scripts/build_attack_snapshot.py                # downloads the pinned bundle
     python scripts/build_attack_snapshot.py --bundle FILE  # a local copy, hash-checked
@@ -34,11 +36,23 @@ def rule_technique_ids() -> list[str]:
     return sorted(ids)
 
 
+def tactic_lookup(bundle: Path) -> list[dict[str, str]]:
+    """Short name and name of every tactic, in the order of the Enterprise matrix."""
+    objects = json.loads(bundle.read_text(encoding="utf-8"))["objects"]
+    by_id = {o["id"]: o for o in objects}
+    (matrix,) = (o for o in objects if o.get("type") == "x-mitre-matrix" and not o.get("revoked"))
+    return [
+        {"shortname": by_id[ref]["x_mitre_shortname"], "name": by_id[ref]["name"]}
+        for ref in matrix["tactic_refs"]
+    ]
+
+
 def build(bundle: Path) -> dict:
     if sha256_file(bundle) != ATTACK["sha256"]:
         raise SystemExit(f"{bundle}: SHA-256 does not match the pinned ATT&CK bundle")
     return {
         "attack": {k: v for k, v in ATTACK.items() if k != "size"},
+        "tactics": tactic_lookup(bundle),
         "techniques": attack_lookup(bundle, rule_technique_ids()),
     }
 

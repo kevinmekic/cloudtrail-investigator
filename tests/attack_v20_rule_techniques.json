@@ -7,6 +7,68 @@
     "path": "enterprise-attack/enterprise-attack-20.0.json",
     "sha256": "81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352"
   },
+  "tactics": [
+    {
+      "shortname": "reconnaissance",
+      "name": "Reconnaissance"
+    },
+    {
+      "shortname": "resource-development",
+      "name": "Resource Development"
+    },
+    {
+      "shortname": "initial-access",
+      "name": "Initial Access"
+    },
+    {
+      "shortname": "execution",
+      "name": "Execution"
+    },
+    {
+      "shortname": "persistence",
+      "name": "Persistence"
+    },
+    {
+      "shortname": "privilege-escalation",
+      "name": "Privilege Escalation"
+    },
+    {
+      "shortname": "stealth",
+      "name": "Stealth"
+    },
+    {
+      "shortname": "defense-impairment",
+      "name": "Defense Impairment"
+    },
+    {
+      "shortname": "credential-access",
+      "name": "Credential Access"
+    },
+    {
+      "shortname": "discovery",
+      "name": "Discovery"
+    },
+    {
+      "shortname": "lateral-movement",
+      "name": "Lateral Movement"
+    },
+    {
+      "shortname": "collection",
+      "name": "Collection"
+    },
+    {
+      "shortname": "command-and-control",
+      "name": "Command and Control"
+    },
+    {
+      "shortname": "exfiltration",
+      "name": "Exfiltration"
+    },
+    {
+      "shortname": "impact",
+      "name": "Impact"
+    }
+  ],
   "techniques": {
     "T1078.004": {
       "status": "active",

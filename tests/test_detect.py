@@ -10,11 +10,18 @@ import pytest
 
 from cloudtrail_events import iam_user, make_db, root
 from ctinv.cli import main
-from ctinv.detect import RuleError, apply_overrides, load_rules, parse_rule, run_rules
+from ctinv.detect import (
+    TACTIC_NAMES,
+    RuleError,
+    apply_overrides,
+    load_rules,
+    parse_rule,
+    run_rules,
+)
 from ctinv.schema import connect
 
 LABELS = Path(__file__).resolve().parent.parent / "labels"
-# ATT&CK v20.0 entries of the techniques the built-in rules use, written by
+# ATT&CK v20.0 tactics and the techniques the built-in rules use, written by
 # scripts/build_attack_snapshot.py.
 RULE_TECHNIQUES = Path(__file__).resolve().parent / "attack_v20_rule_techniques.json"
 
@@ -457,6 +464,11 @@ def test_builtin_rules_match_attack_v20() -> None:
         assert set(builtin.tactics) <= set(entry["tactics"]), builtin.id
         for former in builtin.former_technique_ids:
             assert techniques[former].get("revoked_by") == [builtin.technique_id], builtin.id
+
+
+def test_tactic_names_match_attack_v20() -> None:
+    snapshot = json.loads(RULE_TECHNIQUES.read_text())
+    assert [{"shortname": k, "name": v} for k, v in TACTIC_NAMES.items()] == snapshot["tactics"]
 
 
 def test_rule_text_is_dedented_yaml() -> None:
