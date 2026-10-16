@@ -273,6 +273,18 @@ def test_test_set_needs_a_label_review(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------- isolation
 
 
+def test_reused_event_ids_get_their_own_ids_identical_repeats_stay(tmp_path: Path) -> None:
+    first = iam_user(1)
+    variant = iam_user(1, userIdentity={**first["userIdentity"], "userName": "bob"})
+    source = tmp_path / "in.json"
+    source.write_text("".join(json.dumps(r) + "\n" for r in [first, first, variant, iam_user(2)]))
+    out = tmp_path / "out.json"
+    assert ev.keep_reused_ids(source, out) == 1
+    ids = [json.loads(line)["eventID"] for line in out.read_text().splitlines()]
+    one, two = first["eventID"], iam_user(2)["eventID"]
+    assert ids == [one, one, f"{one}-variant-1", two]
+
+
 def list_calls(first: int, count: int) -> list[dict]:
     return [iam_user(first + i, eventName=f"ListThing{first + i}") for i in range(count)]
 
@@ -429,7 +441,16 @@ def synthetic_project(tmp_path: Path) -> tuple[Path, Path, Path]:
     )
     test_files = {
         "T1685.002/stop/f.json": [tampering],
-        "T1201/policy/f.json": [iam_user(2, eventName="DeleteAccountPasswordPolicy")],
+        # Two different records under one eventID: ingest quarantines the second.
+        "T1201/policy/f.json": [
+            iam_user(2, eventName="DeleteAccountPasswordPolicy"),
+            iam_user(
+                2,
+                eventSource="cloudtrail.amazonaws.com",
+                eventName="StopLogging",
+                requestParameters={"name": "main"},
+            ),
+        ],
     }
     entries = write_dataset(data_dir, "splunk_attack_data", test_files)
     ids = {"T1685.002/stop/f.json": "T1685.002", "T1201/policy/f.json": "T1201"}
@@ -488,8 +509,21 @@ def test_cli_evaluates_both_sets_and_writes_results(
         == hashlib.sha256(review.read_bytes()).hexdigest()
     )
 
+    reused = result["test_set"]["reused_event_ids"]
+    assert [
+        (f["path"], f["records"], f["quarantined_as_is"], f["renamed"]) for f in reused["files"]
+    ] == [("T1201/policy/f.json", 2, 1, 1)]
+    assert reused["totals_every_record_kept"]["detected"] == {"detected": 2, "of": 2}
+    (differs,) = reused["techniques_that_differ"]
+    assert differs["technique"] == "T1201"
+    assert (differs["as_is"]["status"], differs["every_record_kept"]["status"]) == (
+        "missed",
+        "detected",
+    )
+
     (md_path,) = out_dir.glob("evaluation-*.md")
     markdown = md_path.read_text()
+    assert "Reused eventIDs" in markdown
     assert "Detected: 1 / 2 in-scope ATT&CK techniques" in markdown
     assert "T1685.002 \\(formerly T1562.008\\)" in markdown
     assert "exposed before the split" in markdown

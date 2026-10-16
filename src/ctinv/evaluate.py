@@ -43,6 +43,7 @@ import yaml
 from ctinv import __version__
 from ctinv.detect import Rule, run_rules
 from ctinv.ingest import DatasetResolutionError, FilePlan, Ingester, plan_files
+from ctinv.reader import iter_records
 from ctinv.render import md_escape
 from ctinv.schema import connect
 
@@ -468,6 +469,7 @@ def score_test(
             "technique_source": entry["technique_source"],
             "status": item["status"],
             "reason": item.get("reason"),
+            "note": item.get("note"),
             "content": item["content"],
             "records": stats.records_read,
             "events": stats.events,
@@ -608,6 +610,35 @@ def evaluate_development(data_dir: Path, labels_dir: Path, rules: Sequence[Rule]
     return result
 
 
+def keep_reused_ids(path: Path, out: Path) -> int:
+    """Copy a file as NDJSON, giving each differing record under a reused eventID its own ID.
+
+    CloudTrail never reuses an eventID, but some test-set files do: variants made
+    by copying a record and changing e.g. the user name or the time. Ingest keeps
+    the first and quarantines the others. In this copy the n-th distinct record
+    under an eventID gets "<eventID>-variant-<n>"; identical repeats keep the ID
+    and stay duplicates. Returns the number of records whose ID was changed.
+    """
+    variants: dict[str, dict[str, int]] = {}
+    changed = 0
+    with out.open("w", encoding="utf-8") as fh:
+        for record in iter_records(path):
+            event_id = record.get("eventID") if isinstance(record, dict) else None
+            if isinstance(event_id, str):
+                digest = hashlib.sha256(json.dumps(record, sort_keys=True).encode()).hexdigest()
+                seen = variants.setdefault(event_id, {})
+                n = seen.setdefault(digest, len(seen))
+                if n:
+                    record = {**record, "eventID": f"{event_id}-variant-{n}"}
+                    changed += 1
+            fh.write(json.dumps(record) + "\n")
+    return changed
+
+
+def _outcome(technique: dict[str, Any]) -> dict[str, Any]:
+    return {k: technique[k] for k in ("status", "files_detected", "files_counted", "rules")}
+
+
 def evaluate_test(
     data_dir: Path,
     labels_dir: Path,
@@ -615,18 +646,54 @@ def evaluate_test(
     rules: Sequence[Rule],
     on_file: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
+    """Evaluate every labelled file alone; also with reused eventIDs made unique."""
     labels = load_json(labels_dir / "splunk_labels.json")
     review = load_label_review(review_path, labels)
     directory = dataset_directory(data_dir, labels["dataset"])
-    detections = {}
-    for entry in labels["files"]:
-        (plan,) = _plans([directory / entry["path"]], data_dir)
-        if plan.sha256 != entry["sha256"]:
-            raise EvaluationError(f"{entry['path']}: SHA-256 differs from the label file")
-        detections[entry["path"]] = detect_isolated([plan], rules)
-        if on_file:
-            on_file(entry["path"])
+    detections, kept, renamed = {}, {}, {}
+    with tempfile.TemporaryDirectory(prefix="ctinv-evaluate-ids-") as tmp:
+        for n, entry in enumerate(labels["files"]):
+            path = entry["path"]
+            (plan,) = _plans([directory / path], data_dir)
+            if plan.sha256 != entry["sha256"]:
+                raise EvaluationError(f"{path}: SHA-256 differs from the label file")
+            detections[path] = detect_isolated([plan], rules)
+            copy = Path(tmp) / f"{n}.json"
+            renamed[path] = keep_reused_ids(plan.path, copy)
+            if renamed[path]:
+                (copy_plan,) = plan_files([copy], Path(tmp), labels["dataset"])
+                kept[path] = detect_isolated([copy_plan], rules)
+            else:
+                kept[path] = detections[path]
+            if on_file:
+                on_file(path)
     result = score_test(labels, review, detections)
+    every_record = score_test(labels, review, kept)
+    as_is = {t["technique"]: t for t in result["techniques"]}
+    result["reused_event_ids"] = {
+        "files": [
+            {
+                "path": row["path"],
+                "status": row["status"],
+                "records": row["records"],
+                "events_as_is": row["events"],
+                "quarantined_as_is": row["quarantined"],
+                "renamed": renamed[row["path"]],
+            }
+            for row in result["files"]
+            if renamed[row["path"]]
+        ],
+        "totals_every_record_kept": every_record["totals"],
+        "techniques_that_differ": [
+            {
+                "technique": t["technique"],
+                "as_is": _outcome(as_is[t["technique"]]),
+                "every_record_kept": _outcome(t),
+            }
+            for t in every_record["techniques"]
+            if _outcome(t) != _outcome(as_is[t["technique"]])
+        ],
+    }
     result["dataset"] = labels["dataset"]
     result["label_review"] = {
         "file": review_path.as_posix(),
@@ -961,6 +1028,42 @@ def render_markdown(result: dict[str, Any]) -> str:
                 + " |"
             )
         lines.append("")
+        reused = test.get("reused_event_ids")
+        if reused and reused["files"]:
+            lines += [
+                "### Reused eventIDs",
+                "",
+                f"{len(reused['files'])} scenario files reuse eventIDs for records that differ. "
+                "Ingest keeps the first record of an eventID and quarantines differing repeats, "
+                "so the result above is the tool's behaviour on these files. With every record "
+                "kept (repeats given their own IDs, for this comparison only): "
+                f"**{_rate(reused['totals_every_record_kept']['detected'])}** in-scope techniques "
+                "detected.",
+                "",
+                "| Scenario file | Status | Records | Events as is | Quarantined | Renamed |",
+                "|---|---|---|---|---|---|",
+                *(
+                    f"| {_cell(f['path'])} | {_cell(f['status'])} | {f['records']:,} | "
+                    f"{f['events_as_is']:,} | {f['quarantined_as_is']:,} | {f['renamed']:,} |"
+                    for f in reused["files"]
+                ),
+                "",
+            ]
+            if reused["techniques_that_differ"]:
+                lines.append("Techniques whose result differs with every record kept:")
+                lines.append("")
+                for t in reused["techniques_that_differ"]:
+                    a, b = t["as_is"], t["every_record_kept"]
+                    lines.append(
+                        f"- {_cell(t['technique'])}: {_cell(a['status'])} "
+                        f"({a['files_detected']} / {a['files_counted']} files, "
+                        f"{_cell(', '.join(a['rules']) or 'no rule')}) → {_cell(b['status'])} "
+                        f"({b['files_detected']} / {b['files_counted']} files, "
+                        f"{_cell(', '.join(b['rules']) or 'no rule')})"
+                    )
+            else:
+                lines.append("No technique's result differs with every record kept.")
+            lines.append("")
     dev = result.get("development_set")
     if dev:
         t = dev["totals"]
