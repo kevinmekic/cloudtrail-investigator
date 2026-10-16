@@ -1,6 +1,7 @@
 """Tests for the investigation: session graph, pivots, timeline, blast radius, findings."""
 
 import json
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from cloudtrail_events import ACCOUNT, aws_service, event, make_db
 from ctinv.cli import main
 from ctinv.detect import load_rules, run_rules
 from ctinv.investigate import (
+    RESOURCE_PARAMETERS,
     Investigation,
     InvestigationError,
     Scope,
@@ -301,7 +303,7 @@ def test_role_principal_matches_every_session_of_the_role(db: Path) -> None:
     inv = run(db, principal=f"arn:aws:iam::{ACCOUNT}:role/B")
     assert inv.sessions[0].events == 5  # sessions s (4 events) and s2 (1 event)
     assert [s.id for s in inv.sessions[1:]] == [KEY_C]
-    assert statuses(inv)[eid(9)] == "already_in_graph"  # B2's events belong to the role
+    assert statuses(inv)[eid(9)] == "already_in_graph"  # KEY_B2's events belong to the role
     assert statuses(inv)[eid(10)] == "already_in_graph"
 
 
@@ -647,3 +649,11 @@ def test_cli_errors(db: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
         with pytest.raises(SystemExit) as exc:
             main(bad)
         assert exc.value.code == 2
+
+
+def test_documented_resource_parameters_match_the_code() -> None:
+    docs = Path(__file__).parents[1] / "docs" / "INVESTIGATION.md"
+    rows = re.findall(r"^\| (\S+) \| `(\w+)` \| ([a-z ]+) \|$", docs.read_text(), re.MULTILINE)
+    assert tuple((service, name, kind.strip()) for service, name, kind in rows) == (
+        RESOURCE_PARAMETERS
+    )
