@@ -7,6 +7,8 @@ from pathlib import Path
 
 from ctinv import __version__
 
+# Quarantine reasons shown per file by ingest (the quarantine table has all).
+QUARANTINE_REASONS = 2
 # Subcommand name -> one-line help text; the handlers are in HANDLERS below.
 COMMANDS: dict[str, str] = {
     "ingest": "Load CloudTrail JSON / .json.gz files into a local DuckDB database.",
@@ -40,6 +42,10 @@ def _fail(console, message: object, status: int = 2) -> int:
     return status
 
 
+def _clip(text: str, limit: int = 100) -> str:
+    return text if len(text) <= limit else text[: limit - 3] + "..."
+
+
 def _cannot_write(console, path: Path, exc: OSError) -> int:
     return _fail(console, f"cannot write {path}: {exc.strerror or exc}")
 
@@ -70,6 +76,7 @@ def _configure_ingest(sub: argparse.ArgumentParser) -> None:
 def _run_ingest(args: argparse.Namespace) -> int:
     # Imported here so that `ctinv --help` stays fast and works without DuckDB.
     from rich.console import Console
+    from rich.markup import escape
     from rich.table import Table
 
     from ctinv.ingest import DatasetResolutionError, FileResult, ingest, plan_files
@@ -88,8 +95,18 @@ def _run_ingest(args: argparse.Namespace) -> int:
             f"{result.source_file}: read {result.records_read:,}, inserted {result.inserted:,}, "
             f"duplicates {result.duplicates:,}, quarantined {result.quarantined:,}"
         )
+        if result.reasons:
+            shown = result.reasons.most_common(QUARANTINE_REASONS)
+            more = len(result.reasons) - len(shown)
+            line += (
+                " ("
+                + "; ".join(f"{_clip(reason)}: {n:,}" for reason, n in shown)
+                + (f"; {more} more reason(s)" if more else "")
+                + ")"
+            )
         out.print(
-            line + (f" [red]FILE ERROR: {result.file_error}[/red]" if result.file_error else ""),
+            escape(line)
+            + (f" [red]FILE ERROR: {escape(result.file_error)}[/red]" if result.file_error else ""),
             highlight=False,
         )
 
@@ -120,6 +137,12 @@ def _run_ingest(args: argparse.Namespace) -> int:
         f"{stats.elapsed_seconds:.1f} s",
     )
     out.print(table)
+    if stats.total("quarantined") or stats.file_errors:
+        out.print(
+            f"Quarantined records and file errors, each with its reason: table quarantine in "
+            f"{escape(str(args.db))}",
+            highlight=False,
+        )
     return 1 if stats.file_errors else 0
 
 

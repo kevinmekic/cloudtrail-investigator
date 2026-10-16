@@ -145,6 +145,20 @@ def test_bad_records_are_quarantined_and_ingest_continues(tmp_path: Path) -> Non
     assert "is not an ISO 8601 timestamp" in reasons[3]
 
 
+def test_cli_names_quarantine_reasons(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # JSON that is not CloudTrail: every record is quarantined, and the output says why.
+    monkeypatch.setenv("COLUMNS", "1000")
+    log = write_ndjson(tmp_path / "other.json", [{"foo": 1}, {"foo": 2}, [1, 2], iam_user(1)])
+    db = tmp_path / "x.duckdb"
+    assert main(["ingest", str(log), "--db", str(db), "--dataset", "test"]) == 0
+    out = capsys.readouterr().out
+    assert "quarantined 3 (missing or empty eventID: 2; not a JSON object but an array: 1)" in out
+    assert f"table quarantine in {db}" in out
+    assert query(db, "SELECT count(*) FROM quarantine") == [(3,)]
+
+
 def test_truncated_gzip_keeps_earlier_records_and_reports_a_file_error(tmp_path: Path) -> None:
     good = write_envelope(tmp_path / "good.json", [iam_user(1000)])
     full = gzip.compress(json.dumps({"Records": [iam_user(n) for n in range(200)]}).encode())

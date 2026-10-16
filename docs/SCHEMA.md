@@ -35,9 +35,11 @@ ctinv ingest some/other/logs --db x.duckdb --dataset my-sandbox # dataset given 
   goes to `quarantine` with the reason. Values are never coerced; the only
   cleaning is `accessKeyId: ""` becoming NULL. In NDJSON, reading continues at
   the next line that starts with `{`. A file that becomes unreadable (damaged
-  gzip, broken `Records` envelope) keeps every record read before the damage
+  gzip, broken `Records` envelope, or a single record longer than 32 million
+  characters, the reader's bound) keeps every record read before the damage
   and gets a file-level quarantine row and an `ingested_files.file_error`; the
-  command then exits with status 1.
+  command then exits with status 1. Per file, ingest prints the most frequent
+  quarantine reasons; the `quarantine` table has every record with its reason.
 - **One transaction per file**, so a crash never leaves a half-ingested file.
   `records_read = inserted + duplicates + quarantined` holds for every file.
 
@@ -207,3 +209,7 @@ Python (reading, normalizing, writing batches) and 42% DuckDB (loading batches,
 deduplication, commits). On six files, DuckDB's default limit, 1 GB and 512 MB took 120 s,
 101 s and 113 s with a peak of 1.53, 1.14 and 0.70 GB, so the limit costs no
 time. Re-ingesting the 39,207-record file 19 took 4.5 s and added nothing.
+
+One synthetic file of 1,000,000 records (1.06 GB of JSON in a single `Records`
+envelope, gzip-compressed) took 138 s with a peak of 1.26 GB, so memory does
+not grow with the size of a single file.

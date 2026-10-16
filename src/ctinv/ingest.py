@@ -18,6 +18,7 @@ import json
 import tempfile
 import time
 import zlib
+from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -40,6 +41,7 @@ MAX_QUARANTINE_TEXT = 1 << 20
 # DuckDB's read_json allocates buffers from this size, so it also bounds memory.
 MAX_ROW_BYTES = 16 << 20
 SUFFIXES = (".json", ".json.gz")
+CONFLICTING_DUPLICATE = "duplicate eventID with different content than the stored event"
 # Errors that make the rest of a file unreadable (corrupt gzip, encoding, structure).
 FILE_ERRORS = (RecordFormatError, OSError, EOFError, zlib.error, UnicodeDecodeError, RecursionError)
 
@@ -69,6 +71,12 @@ class FileResult:
     duplicates: int = 0
     quarantined: int = 0
     file_error: str | None = None
+    # Why records were quarantined, with counts; the quarantine table has each record.
+    reasons: Counter[str] = field(default_factory=Counter)
+
+    def quarantine(self, reason: str, count: int = 1) -> None:
+        self.quarantined += count
+        self.reasons[reason] += count
 
 
 @dataclass
@@ -282,7 +290,7 @@ class Ingester:
     def _route(self, plan: FilePlan, index: int, record: Any, result: FileResult) -> None:
         if isinstance(record, MalformedRecord):
             self._quarantine(plan, index, None, record.reason, record.text)
-            result.quarantined += 1
+            result.quarantine(record.reason)
             return
         try:
             row = normalize(record)
@@ -295,14 +303,14 @@ class Ingester:
                 str(exc),
                 json.dumps(record),
             )
-            result.quarantined += 1
+            result.quarantine(str(exc))
             return
         row.update(dataset=plan.dataset, source_file=plan.source_file, source_index=index)
         try:
             self.events.write(row)
         except RowTooLarge as exc:
             self._quarantine(plan, index, row["event_id"], str(exc), json.dumps(record))
-            result.quarantined += 1
+            result.quarantine(str(exc))
 
     def _quarantine(
         self, plan: FilePlan, index: int | None, event_id: str | None, reason: str, text: str | None
@@ -362,16 +370,15 @@ class Ingester:
             con.execute(
                 """
                 INSERT INTO quarantine
-                SELECT dataset, source_file, source_index, event_id,
-                       'duplicate eventID with different content than the stored event',
-                       raw::VARCHAR, ?
+                SELECT dataset, source_file, source_index, event_id, ?, raw::VARCHAR, ?
                 FROM repeats WHERE conflicting
                 """,
-                [utc_now()],
+                [CONFLICTING_DUPLICATE, utc_now()],
             )
             result.inserted += inserted
             result.duplicates += identical
-            result.quarantined += conflicting
+            if conflicting:
+                result.quarantine(CONFLICTING_DUPLICATE, conflicting)
         if self.quarantine.load(con):
             con.execute("INSERT INTO quarantine SELECT * FROM staging_quarantine")
 
