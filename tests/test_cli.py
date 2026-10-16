@@ -2,7 +2,7 @@
 
 import pytest
 
-from ctinv.cli import main
+from ctinv.cli import COMMANDS, HANDLERS, main
 
 EXPECTED_COMMANDS = ("ingest", "detect", "investigate", "report", "evaluate")
 
@@ -16,7 +16,5 @@ def test_help_lists_all_subcommands(capsys: pytest.CaptureFixture[str]) -> None:
         assert command in out
 
 
-@pytest.mark.parametrize("command", ["evaluate"])
-def test_placeholder_subcommands(command: str, capsys: pytest.CaptureFixture[str]) -> None:
-    assert main([command]) == 1
-    assert capsys.readouterr().err.strip() == f"{command}: not implemented yet"
+def test_every_subcommand_is_implemented() -> None:
+    assert set(HANDLERS) == set(COMMANDS) == set(EXPECTED_COMMANDS)

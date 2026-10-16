@@ -444,12 +444,160 @@ def _run_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _configure_evaluate(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument(
+        "--data-dir",
+        type=Path,
+        default=Path("data"),
+        help="data directory with MANIFEST.json (default: ./data)",
+    )
+    sub.add_argument(
+        "--labels-dir",
+        type=Path,
+        default=Path("labels"),
+        help="directory with the frozen label files (default: ./labels)",
+    )
+    sub.add_argument(
+        "--label-review",
+        type=Path,
+        default=Path("evaluation/splunk_label_review.yml"),
+        metavar="FILE",
+        help="review of the test set's labels; the test set is not evaluated without it "
+        "(default: evaluation/splunk_label_review.yml)",
+    )
+    sub.add_argument(
+        "--only",
+        choices=("test", "development", "review"),
+        help="evaluate only the test set, the development set or the review sample",
+    )
+    sub.add_argument(
+        "--out-dir",
+        type=Path,
+        default=Path("results"),
+        metavar="DIR",
+        help="write evaluation-<UTC time>.md and .json here (default: results)",
+    )
+    sub.add_argument(
+        "--db",
+        type=Path,
+        help="also draw the manual review sample from this database's findings "
+        "(run ctinv detect on it first)",
+    )
+    sub.add_argument(
+        "--review-dataset",
+        default="flaws_cloud",
+        help="dataset whose findings are sampled (default: flaws_cloud)",
+    )
+    sub.add_argument(
+        "--review-file",
+        type=Path,
+        default=Path("evaluation/fp_review.yml"),
+        metavar="FILE",
+        help="manual review labels of the sample (default: evaluation/fp_review.yml)",
+    )
+    sub.add_argument(
+        "--sample-size",
+        type=_count_argument,
+        default=10,
+        metavar="N",
+        help="findings per rule in the review sample (default: 10)",
+    )
+    sub.add_argument(
+        "--seed",
+        default="ctinv-review-1",
+        help="seed of the review sample (default: ctinv-review-1)",
+    )
+    sub.add_argument(
+        "--init-review",
+        action="store_true",
+        help="with --db: write the review file with the drawn sample and empty labels, then stop",
+    )
+
+
+def _run_evaluate(args: argparse.Namespace) -> int:
+    from datetime import datetime
+
+    from rich.console import Console
+
+    from ctinv import evaluate as ev
+    from ctinv.detect import load_rules
+    from ctinv.investigate import dump_json
+    from ctinv.schema import connect
+
+    err, out = Console(stderr=True), Console()
+    wants_review = args.only in (None, "review") and args.db is not None
+    if (args.init_review or args.only == "review") and args.db is None:
+        err.print("[red]error:[/red] --init-review and --only review need --db")
+        return 2
+    if args.db is not None and not args.db.exists():
+        err.print(f"[red]error:[/red] database {args.db} not found; run ctinv ingest first")
+        return 2
+
+    # The evaluation always uses the built-in rules with their default parameters.
+    rules = load_rules()
+    result = ev.new_result(rules)
+    sheet = None
+    try:
+        if wants_review or args.init_review:
+            con = connect(args.db)
+            try:
+                sample = ev.draw_sample(
+                    con, rules, args.review_dataset, args.sample_size, args.seed
+                )
+                if args.init_review:
+                    ev.write_review_file(args.review_file, sample)
+                    out.print(
+                        f"Review file written: {args.review_file} "
+                        f"({len(sample['findings'])} findings, labels empty)",
+                        highlight=False,
+                    )
+                    return 0
+                contexts = {
+                    f["finding_id"]: ev.sample_context(con, f["finding_id"])
+                    for f in sample["findings"]
+                }
+            finally:
+                con.close()
+            if not args.review_file.exists():
+                raise ev.EvaluationError(
+                    f"{args.review_file} not found; create it with --init-review"
+                )
+            result["review_sample"] = ev.summarise_review(
+                sample, ev.read_review_file(args.review_file), args.review_file
+            )
+            sheet = ev.review_sheet(sample, contexts)
+        if args.only in (None, "test"):
+            result["test_set"] = ev.evaluate_test(
+                args.data_dir, args.labels_dir, args.label_review, rules
+            )
+        if args.only in (None, "development"):
+            result["development_set"] = ev.evaluate_development(
+                args.data_dir, args.labels_dir, rules
+            )
+    except ev.EvaluationError as exc:
+        err.print(f"[red]error:[/red] {exc}", highlight=False)
+        return 2
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    stem = ev.output_stem(args.out_dir, datetime.fromisoformat(result["generated_at"]))
+    paths = [stem.with_suffix(".md"), stem.with_suffix(".json")]
+    paths[0].write_text(ev.render_markdown(result), encoding="utf-8")
+    dump_json(result, paths[1])
+    if sheet is not None:
+        paths.append(stem.parent / f"{stem.name}-review-sheet.md")
+        paths[2].write_text(sheet, encoding="utf-8")
+    ev.print_result(out, result)
+    out.print("\nEvaluation written to " + ", ".join(str(p) for p in paths), highlight=False)
+    return 0
+
+
 Handler = Callable[[argparse.Namespace], int]
 HANDLERS: dict[str, tuple[Callable[[argparse.ArgumentParser], None] | None, Handler]] = {
     "ingest": (_configure_ingest, _run_ingest),
     "detect": (_configure_detect, _run_detect),
     "investigate": (_configure_investigate, _run_investigate),
     "report": (_configure_report, _run_report),
+    "evaluate": (_configure_evaluate, _run_evaluate),
 }
 
 
