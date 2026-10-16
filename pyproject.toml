@@ -19,7 +19,9 @@ dependencies = [
 dev = [
     "markdown-it-py[linkify]>=3.0",
     "pytest>=8.0",
-    "ruff>=0.6",
+    # Exact version: lint and format results change between ruff releases, and
+    # local runs and CI must agree.
+    "ruff==0.17.0",
 ]
 
 [project.scripts]
