@@ -60,7 +60,7 @@ FINDING_CATEGORIES = ("attack", "lab scaffolding only", "unlabelled background")
 # Statuses of a test-set file in the label review.
 FILE_STATUSES = ("in-scope", "out-of-scope", "label-ambiguous", "no-label")
 # Labels of the manual review of sampled findings.
-REVIEW_LABELS = ("true-positive", "benign-true-positive", "false-positive", "unclear")
+REVIEW_LABELS = ("true_positive", "benign_true_positive", "false_positive", "unsure")
 DEFAULT_SAMPLE_SIZE = 10
 DEFAULT_SEED = "ctinv-review-1"
 # Modules whose code decides which findings exist; hashed into the results.
@@ -824,19 +824,26 @@ REVIEW_HEADER = """\
 # (all of them if a rule has fewer). `ctinv evaluate --db <database>` checks
 # that the database still yields exactly these findings.
 #
-# For each finding, set `label` to one of:
-#   true-positive         the evidence shows the behaviour the rule describes, and
+# Labels are proposed by the tool author's assistant, each reviewed and decided
+# by a human: `proposed_label` and `proposed_reason` (one line, from CloudTrail
+# events only) are the proposal; `label` is the human decision and stays empty
+# until it is made. `ctinv evaluate` counts how many decisions differ from the
+# proposal. Labels:
+#   true_positive         the evidence shows the behaviour the rule describes, and
 #                         nothing in the logs explains it as expected activity
-#   benign-true-positive  the evidence shows that behaviour, but it is expected
+#   benign_true_positive  the evidence shows that behaviour, but it is expected
 #                         activity (e.g. the account owner's administration, a
 #                         known scanner)
-#   false-positive        the evidence does not show the behaviour the rule
+#   false_positive        the evidence does not show the behaviour the rule
 #                         describes
-#   unclear               the logs do not allow a decision
-# and optionally a short `note`. The summary and context of each finding (top
-# APIs, source addresses, user agents, errors) are in the review sheet that
+#   unsure                the logs do not allow a decision
+# `note` is optional. The summary and context of each finding (top APIs, source
+# addresses, user agents, errors) are in the review sheet that
 # `ctinv evaluate --db <database>` writes next to its results (git-ignored).
 """
+REVIEW_METHOD = (
+    "labels proposed by the tool author's assistant, each reviewed and decided by a human"
+)
 
 
 def write_review_file(path: Path, sample: dict[str, Any]) -> None:
@@ -848,15 +855,21 @@ def write_review_file(path: Path, sample: dict[str, Any]) -> None:
             # No summaries: some name source addresses, which stay in the review sheet.
             {
                 **{k: f[k] for k in ("finding_id", "rule_id", "principal", "first_seen")},
+                "proposed_label": None,
+                "proposed_reason": None,
                 "label": None,
                 "note": None,
             }
             for f in sample["findings"]
         ],
     }
+    write_review_document(path, document)
+
+
+def write_review_document(path: Path, document: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        REVIEW_HEADER + "\n" + yaml.safe_dump(document, sort_keys=False, width=100),
+        REVIEW_HEADER + "\n" + yaml.safe_dump(document, sort_keys=False, width=4096),
         encoding="utf-8",
     )
 
@@ -866,17 +879,35 @@ def read_review_file(path: Path) -> dict[str, Any]:
     if not isinstance(document, dict) or not isinstance(document.get("findings"), list):
         raise EvaluationError(f"{path}: needs 'sample' and 'findings'")
     for item in document["findings"]:
-        label = item.get("label")
-        if label is not None and label not in REVIEW_LABELS:
-            raise EvaluationError(
-                f"{path}: {item.get('finding_id')}: label must be one of "
-                f"{', '.join(REVIEW_LABELS)} (or empty)"
-            )
+        for field in ("proposed_label", "label"):
+            value = item.get(field)
+            if value is not None and value not in REVIEW_LABELS:
+                raise EvaluationError(
+                    f"{path}: {item.get('finding_id')}: {field} must be one of "
+                    f"{', '.join(REVIEW_LABELS)} (or empty)"
+                )
+        if item.get("proposed_label") and not (item.get("proposed_reason") or "").strip():
+            raise EvaluationError(f"{path}: {item.get('finding_id')}: a proposal needs a reason")
     return document
 
 
+def _review_counts(population: int) -> dict[str, int]:
+    return {
+        "population": population,
+        "sampled": 0,
+        "proposed": 0,
+        "decided": 0,
+        **{label: 0 for label in REVIEW_LABELS},
+        "proposals_changed": 0,
+    }
+
+
 def summarise_review(sample: dict[str, Any], document: dict[str, Any], path: Path) -> dict:
-    """Combine the drawn sample with the review labels; the two must match exactly."""
+    """Combine the drawn sample with the review file; the two must match exactly.
+
+    Counts per rule the proposals, the human decisions, the decided labels and
+    how many decisions differ from the proposal.
+    """
     params = document.get("sample") or {}
     for key in ("dataset", "seed", "per_rule"):
         if params.get(key) != sample[key]:
@@ -889,40 +920,38 @@ def summarise_review(sample: dict[str, Any], document: dict[str, Any], path: Pat
             f"({len(drawn - set(reviewed))} new, {len(set(reviewed) - drawn)} gone); "
             "were the rules or the data changed?"
         )
-    per_rule = {}
+    per_rule = {rule_id: _review_counts(n) for rule_id, n in sample["population"].items()}
     for f in sample["findings"]:
         item = reviewed[f["finding_id"]]
-        entry = per_rule.setdefault(
-            f["rule_id"],
-            {
-                "population": sample["population"][f["rule_id"]],
-                "sampled": 0,
-                "reviewed": 0,
-                **{label: 0 for label in REVIEW_LABELS},
-            },
-        )
+        entry = per_rule.setdefault(f["rule_id"], _review_counts(0))
         entry["sampled"] += 1
+        entry["proposed"] += bool(item.get("proposed_label"))
         if item.get("label"):
-            entry["reviewed"] += 1
+            entry["decided"] += 1
             entry[item["label"]] += 1
-    for rule_id, n in sample["population"].items():
-        per_rule.setdefault(
-            rule_id,
-            {"population": n, "sampled": 0, "reviewed": 0, **{lb: 0 for lb in REVIEW_LABELS}},
-        )
+            if item.get("proposed_label") and item["label"] != item["proposed_label"]:
+                entry["proposals_changed"] += 1
+    totals = {
+        key: sum(n[key] for n in per_rule.values())
+        for key in ("sampled", "proposed", "decided", *REVIEW_LABELS, "proposals_changed")
+    }
     return {
         "kind": "manually reviewed sample (not a measured false-positive rate)",
+        "method": REVIEW_METHOD,
         "file": path.as_posix(),
         "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         "dataset": sample["dataset"],
         "seed": sample["seed"],
         "per_rule": sample["per_rule"],
+        "totals": totals,
         "rules": dict(sorted(per_rule.items())),
         "findings": [
             {
                 **f,
-                "label": reviewed[f["finding_id"]].get("label"),
-                "note": reviewed[f["finding_id"]].get("note"),
+                **{
+                    key: reviewed[f["finding_id"]].get(key)
+                    for key in ("proposed_label", "proposed_reason", "label", "note")
+                },
             }
             for f in sample["findings"]
         ],
@@ -1114,22 +1143,27 @@ def render_markdown(result: dict[str, Any]) -> str:
         lines.append("")
     review = result.get("review_sample")
     if review:
+        t = review["totals"]
         lines += [
             "## Manually reviewed sample (flaws.cloud)",
             "",
             "Not a measured false-positive rate: flaws.cloud has no ground truth. Up to "
-            f"{review['per_rule']} random findings per rule, labelled by hand.",
+            f"{review['per_rule']} random findings per rule; {_cell(review['method'])}.",
             "",
-            "| Rule | Findings | Sampled | Reviewed | "
+            f"**Decided: {t['decided']} of {t['sampled']}; proposals changed by the reviewer: "
+            f"{t['proposals_changed']} of {t['decided']} decided** "
+            f"({t['proposed']} proposals).",
+            "",
+            "| Rule | Findings | Sampled | Decided | "
             + " | ".join(_cell(label) for label in REVIEW_LABELS)
-            + " |",
-            "|---|---|---|---|" + "---|" * len(REVIEW_LABELS),
+            + " | Proposals changed |",
+            "|---|---|---|---|" + "---|" * (len(REVIEW_LABELS) + 1),
         ]
         for rule_id, n in review["rules"].items():
             lines.append(
-                f"| {_cell(rule_id)} | {n['population']:,} | {n['sampled']} | {n['reviewed']} | "
+                f"| {_cell(rule_id)} | {n['population']:,} | {n['sampled']} | {n['decided']} | "
                 + " | ".join(str(n[label]) for label in REVIEW_LABELS)
-                + " |"
+                + f" | {n['proposals_changed']} |"
             )
         lines.append("")
     rules = result["rule_set"]["rules"]
@@ -1240,18 +1274,22 @@ def print_result(console: Any, result: dict[str, Any]) -> None:
         console.print(table)
     review = result.get("review_sample")
     if review:
+        t = review["totals"]
         table = Table(
-            title="Manually reviewed sample (not a measured false-positive rate)",
+            title="Manually reviewed sample (not a measured false-positive rate): "
+            f"{t['decided']} of {t['sampled']} decided, {t['proposals_changed']} proposals "
+            "changed",
             title_justify="left",
         )
-        for column in ("rule", "findings", "sampled", "reviewed", *REVIEW_LABELS):
+        for column in ("rule", "findings", "sampled", "decided", *REVIEW_LABELS, "changed"):
             table.add_column(column, justify="left" if column == "rule" else "right")
         for rule_id, n in review["rules"].items():
             table.add_row(
                 rule_id,
                 f"{n['population']:,}",
                 str(n["sampled"]),
-                str(n["reviewed"]),
+                str(n["decided"]),
                 *(str(n[label]) for label in REVIEW_LABELS),
+                str(n["proposals_changed"]),
             )
         console.print(table)

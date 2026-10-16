@@ -361,19 +361,42 @@ def test_review_file_round_trip_and_mismatch(tmp_path: Path) -> None:
         ev.write_review_file(path, sample)
 
     document = ev.read_review_file(path)
-    document["findings"][0]["label"] = "benign-true-positive"
+    assert [f["label"] for f in document["findings"]] == [None, None]
+    assert set(document["findings"][0]) >= {"proposed_label", "proposed_reason", "label", "note"}
+    for item in document["findings"]:
+        item.update(proposed_label="benign_true_positive", proposed_reason="owner session")
+    document["findings"][0]["label"] = "benign_true_positive"  # proposal kept
     path.write_text(yaml.safe_dump(document))
     summary = ev.summarise_review(sample, ev.read_review_file(path), path)
     root_usage = summary["rules"]["root-account-usage"]
-    assert (root_usage["population"], root_usage["sampled"], root_usage["reviewed"]) == (5, 2, 1)
-    assert root_usage["benign-true-positive"] == 1
+    assert (root_usage["population"], root_usage["sampled"], root_usage["decided"]) == (5, 2, 1)
+    assert (root_usage["proposed"], root_usage["proposals_changed"]) == (2, 0)
+    assert root_usage["benign_true_positive"] == 1
     assert summary["rules"]["discovery-burst"]["sampled"] == 0  # rules without findings listed
+    assert summary["method"] == ev.REVIEW_METHOD
+
+    document["findings"][1]["label"] = "unsure"  # proposal changed
+    path.write_text(yaml.safe_dump(document))
+    summary = ev.summarise_review(sample, ev.read_review_file(path), path)
+    assert {k: summary["totals"][k] for k in ("proposed", "decided", "proposals_changed")} == {
+        "proposed": 2,
+        "decided": 2,
+        "proposals_changed": 1,
+    }
 
     with pytest.raises(ev.EvaluationError, match="per_rule"):
         ev.summarise_review(bigger, ev.read_review_file(path), path)
     document["findings"][0]["label"] = "probably fine"
     path.write_text(yaml.safe_dump(document))
     with pytest.raises(ev.EvaluationError, match="label must be one of"):
+        ev.read_review_file(path)
+    document["findings"][0].update(label=None, proposed_label="unclear")
+    path.write_text(yaml.safe_dump(document))
+    with pytest.raises(ev.EvaluationError, match="proposed_label must be one of"):
+        ev.read_review_file(path)
+    document["findings"][0].update(proposed_label="unsure", proposed_reason=" ")
+    path.write_text(yaml.safe_dump(document))
+    with pytest.raises(ev.EvaluationError, match="needs a reason"):
         ev.read_review_file(path)
 
 
