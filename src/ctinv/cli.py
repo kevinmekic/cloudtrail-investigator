@@ -2,14 +2,12 @@
 
 import argparse
 import json
-import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from ctinv import __version__
 
-# Subcommand name -> one-line help text. Commands without a handler below are
-# placeholders until they are implemented.
+# Subcommand name -> one-line help text; the handlers are in HANDLERS below.
 COMMANDS: dict[str, str] = {
     "ingest": "Load CloudTrail JSON / .json.gz files into a local DuckDB database.",
     "detect": "Run detection rules and store findings with their evidence eventIDs.",
@@ -28,9 +26,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", metavar="<command>", required=True)
     for name, help_text in COMMANDS.items():
         sub = subparsers.add_parser(name, help=help_text, description=help_text)
-        configure, handler = HANDLERS.get(name, (None, _not_implemented))
-        if configure:
-            configure(sub)
+        configure, handler = HANDLERS[name]
+        configure(sub)
         sub.set_defaults(handler=handler)
     return parser
 
@@ -109,12 +106,6 @@ def _run_ingest(args: argparse.Namespace) -> int:
     )
     out.print(table)
     return 1 if stats.file_errors else 0
-
-
-def _not_implemented(args: argparse.Namespace) -> int:
-    # Non-zero exit so scripts never mistake a placeholder for a successful run.
-    print(f"{args.command}: not implemented yet", file=sys.stderr)
-    return 1
 
 
 def _configure_detect(sub: argparse.ArgumentParser) -> None:
@@ -592,7 +583,7 @@ def _run_evaluate(args: argparse.Namespace) -> int:
 
 
 Handler = Callable[[argparse.Namespace], int]
-HANDLERS: dict[str, tuple[Callable[[argparse.ArgumentParser], None] | None, Handler]] = {
+HANDLERS: dict[str, tuple[Callable[[argparse.ArgumentParser], None], Handler]] = {
     "ingest": (_configure_ingest, _run_ingest),
     "detect": (_configure_detect, _run_detect),
     "investigate": (_configure_investigate, _run_investigate),
