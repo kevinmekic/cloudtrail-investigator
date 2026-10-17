@@ -125,10 +125,16 @@ Every CloudTrail field can be chosen by whoever wrote the log, including
 - **Markdown**: every value a template outputs passes through one escaping
   function (Jinja2's `finalize` hook, so a template cannot forget it). It
   backslash-escapes the characters that make links, images, HTML, emphasis,
-  code, math and table cells (`` \ ` * _ { } [ ] < > ( ) # + ! | ~ & $ @ ``),
+  code, math and table cells (`` \ ` * _ { } [ ] < > ( ) # + ! | ~ & $ ``),
   the colon of `://`, and the dot in domain names (`www.` and bare domains,
   which some renderers link without `www.`), so values cannot break table rows
   or turn into links or HTML. IP addresses, times and eventIDs stay readable.
+  GitHub links e-mail addresses, `@mentions` and issue references (`#1`,
+  `GH-1`, `owner/repo#1`) even when they are escaped, and in issues and pull
+  requests a mention notifies the user it names. It does neither inside a code
+  span, so a word of a value that contains `@`, `#` and a digit, or `GH-` and a
+  digit is shown as code (as logged, without the punctuation around it), for
+  example `` `alice@example.com` `` in an ARN or a user agent.
   The report's own Markdown contains no links.
 - **Both**: control, format and line-separator characters (newlines, tabs,
   bidirectional overrides, zero-width characters) are shown as `\uXXXX`, so a
@@ -139,7 +145,15 @@ pipes, a newline and a right-to-left override through `userAgent` and
 `eventName`, and check the HTML with an HTML parser and the Markdown with a
 GitHub-flavoured Markdown parser (markdown-it-py with linkify): no element,
 attribute, link or image comes from a value, and every table row keeps its
-columns.
+columns. markdown-it-py does not link e-mail addresses, mentions or issue
+references the way GitHub does, so the tests check instead that each of them
+is inside a code span. The hostile test report was also rendered once with
+GitHub's own renderer (its Markdown API): no link, mention or issue reference.
+
+Not covered: GitHub replaces emoji shortcodes such as `:x:` with emoji, also
+when escaped, so a value containing one displays differently on GitHub, and in
+issues and pull requests it links hashes of the repository's own commits and
+shows them shortened. The HTML report shows every value as logged.
 
 ## Anonymised datasets
 
