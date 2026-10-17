@@ -145,11 +145,8 @@ def test_bad_records_are_quarantined_and_ingest_continues(tmp_path: Path) -> Non
     assert "is not an ISO 8601 timestamp" in reasons[3]
 
 
-def test_cli_names_quarantine_reasons(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_cli_names_quarantine_reasons(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     # JSON that is not CloudTrail: every record is quarantined, and the output says why.
-    monkeypatch.setenv("COLUMNS", "1000")
     log = write_ndjson(tmp_path / "other.json", [{"foo": 1}, {"foo": 2}, [1, 2], iam_user(1)])
     db = tmp_path / "x.duckdb"
     assert main(["ingest", str(log), "--db", str(db), "--dataset", "test"]) == 0

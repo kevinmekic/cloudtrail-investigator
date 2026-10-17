@@ -34,11 +34,17 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _say(console, text: str) -> None:
+    """Print a message line unbroken. Rich wraps at the console width (80 columns when the
+    output is not a terminal), which puts newlines into paths; the terminal wraps instead."""
+    console.print(text, highlight=False, soft_wrap=True)
+
+
 def _fail(console, message: object, status: int = 2) -> int:
     """Print an error (escaped: paths and messages may contain markup) and return the status."""
     from rich.markup import escape
 
-    console.print(f"[red]error:[/red] {escape(str(message))}", highlight=False)
+    _say(console, f"[red]error:[/red] {escape(str(message))}")
     return status
 
 
@@ -104,10 +110,10 @@ def _run_ingest(args: argparse.Namespace) -> int:
                 + (f"; {more} more reason(s)" if more else "")
                 + ")"
             )
-        out.print(
+        _say(
+            out,
             escape(line)
             + (f" [red]FILE ERROR: {escape(result.file_error)}[/red]" if result.file_error else ""),
-            highlight=False,
         )
 
     try:
@@ -138,10 +144,10 @@ def _run_ingest(args: argparse.Namespace) -> int:
     )
     out.print(table)
     if stats.total("quarantined") or stats.file_errors:
-        out.print(
+        _say(
+            out,
             f"Quarantined records and file errors, each with its reason: table quarantine in "
             f"{escape(str(args.db))}",
-            highlight=False,
         )
     return 1 if stats.file_errors else 0
 
@@ -198,9 +204,8 @@ def _run_detect(args: argparse.Namespace) -> int:
         return _fail(err, exc)
     try:
         if not con.execute("SELECT count(*) FROM events").fetchone()[0]:
-            err.print(
-                f"note: {escape(str(args.db))} holds no events, so there is nothing to detect",
-                highlight=False,
+            _say(
+                err, f"note: {escape(str(args.db))} holds no events, so there is nothing to detect"
             )
         results = run_rules(con, rules)
     except RuleError as exc:
@@ -227,10 +232,10 @@ def _run_detect(args: argparse.Namespace) -> int:
     out.print(table)
     for rule in rules:
         for name, value in rule.overrides.items():
-            out.print(
+            _say(
+                out,
                 f"{rule.id}: {name} = {json.dumps(value)} "
                 f"(default {json.dumps(rule_defaults[rule.id][name])})",
-                highlight=False,
             )
     return 0
 
@@ -362,7 +367,7 @@ def _run_investigate(args: argparse.Namespace) -> int:
             write_json(inv, args.output, str(args.db))
         except OSError as exc:
             return _cannot_write(err, args.output, exc)
-        out.print(f"\nInvestigation written to {args.output}", highlight=False)
+        _say(out, f"\nInvestigation written to {args.output}")
     return 0
 
 
@@ -470,7 +475,7 @@ def _run_report(args: argparse.Namespace) -> int:
             + (f" [dim]Evidence: {escape(', '.join(evidence))}[/dim]" if evidence else ""),
             highlight=False,
         )
-    out.print("\nReport written to " + ", ".join(str(p) for p in paths), highlight=False)
+    _say(out, "\nReport written to " + ", ".join(str(p) for p in paths))
     return 0
 
 
@@ -575,10 +580,10 @@ def _run_evaluate(args: argparse.Namespace) -> int:
                         ev.write_review_file(args.review_file, sample)
                     except OSError as exc:
                         return _cannot_write(err, args.review_file, exc)
-                    out.print(
+                    _say(
+                        out,
                         f"Review file written: {args.review_file} "
                         f"({len(sample['findings'])} findings, labels empty)",
-                        highlight=False,
                     )
                     return 0
                 contexts = {
@@ -618,7 +623,7 @@ def _run_evaluate(args: argparse.Namespace) -> int:
     except OSError as exc:
         return _cannot_write(err, args.out_dir, exc)
     ev.print_result(out, result)
-    out.print("\nEvaluation written to " + ", ".join(str(p) for p in paths), highlight=False)
+    _say(out, "\nEvaluation written to " + ", ".join(str(p) for p in paths))
     return 0
 
 
