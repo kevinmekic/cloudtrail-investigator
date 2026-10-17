@@ -10,9 +10,12 @@ outputs is escaped; the templates' own text is the only markup.
 * Markdown: every output value is escaped by ``md_escape`` (the environment's
   ``finalize`` hook, so a template cannot forget it). It backslash-escapes
   the characters that make links, images, HTML, emphasis, code and table cells,
-  and the characters autolinking needs (``://``, ``@``, and the dot in
-  ``www.`` and other domain names, which renderers such as markdown-it's
-  linkify turn into links even without ``www.``).
+  and the characters autolinking needs (``://``, and the dot in ``www.`` and
+  other domain names, which renderers such as markdown-it's linkify turn into
+  links even without ``www.``). GitHub links e-mail addresses, @mentions and
+  issue references (``#1``, ``GH-1``, ``owner/repo#1``) even when escaped, but
+  never inside a code span, so a word with ``@``, ``#`` and a digit, or ``GH-``
+  and a digit becomes a code span, without its surrounding punctuation.
 * Both: control, format and line-separator characters (newlines, bidirectional
   overrides, zero-width characters) are shown as ``\\uXXXX`` text, so a value
   cannot break a line or table row, or display differently from what it is.
@@ -31,12 +34,17 @@ _HIDDEN = {"Cc", "Cf", "Zl", "Zp"}
 # Backslash escapes are valid before any ASCII punctuation in CommonMark/GFM, so
 # escaping more than needed only changes the source, never the rendered text.
 _MD_ESCAPE = re.compile(
-    r"[\\`*_{}\[\]<>()#+!|~&$@]"  # links, images, HTML, emphasis, code, tables, math
+    r"[\\`*_{}\[\]<>()#+!|~&$]"  # links, images, HTML, emphasis, code, tables, math
     r"|:(?=//)"  # http:// autolinks
     r"|(?<=[0-9A-Za-z])\.(?=[A-Za-z])"  # www. and bare-domain autolinks (not IPs)
     r"|^[-=](?=[-= \t]|$)"  # a list item, rule or heading underline, should a value start a line
 )
 _MD_ORDERED = re.compile(r"^(\d{1,9})\.(?=[ \t]|$)")  # an ordered list item, likewise
+# A word ends at whitespace, a table pipe or a backtick, so a code span made of it
+# needs no longer fence and cannot split a table cell.
+_MD_WORD = re.compile(r"[^\s|`]+")
+_MD_LINKABLE = re.compile(r"@|#[0-9]|(?i:gh)-[0-9]")  # e-mail, @mention, issue reference
+_MD_LEAD, _MD_TRAIL = "([{<\"'", ")]}>\"'.,;:!?"  # punctuation kept outside the code span
 
 
 def visible(text: str) -> str:
@@ -51,9 +59,22 @@ def visible(text: str) -> str:
     )
 
 
+def _md_text(text: str) -> str:
+    return _MD_ESCAPE.sub(lambda m: "\\" + m.group(), text)
+
+
 def md_escape(text: str) -> str:
-    text = _MD_ESCAPE.sub(lambda m: "\\" + m.group(), visible(text))
-    return _MD_ORDERED.sub(r"\1\\.", text)
+    text = visible(text)
+    parts, done = [], 0
+    for word in _MD_WORD.finditer(text):
+        if _MD_LINKABLE.search(word.group()):
+            # The linkable characters are not punctuation, so they stay inside.
+            start = word.end() - len(word.group().lstrip(_MD_LEAD))
+            end = word.start() + len(word.group().rstrip(_MD_TRAIL))
+            parts += [_md_text(text[done:start]), f"`{text[start:end]}`"]
+            done = end
+    parts.append(_md_text(text[done:]))
+    return _MD_ORDERED.sub(r"\1\\.", "".join(parts))
 
 
 def _html_finalize(value: Any) -> Any:

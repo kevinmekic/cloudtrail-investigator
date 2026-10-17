@@ -35,11 +35,13 @@ KEY_A = "AKIAEXAMPLEALICE0001"
 KEY_B = "ASIAEXAMPLEROLEB0001"
 OTHER_ACCOUNT = "444455556666"
 T0 = datetime(2023, 1, 1)
-# Attacker-controlled fields: HTML, quotes, Markdown links and tables, autolinks,
-# a newline and a right-to-left override.
+# Attacker-controlled fields: HTML, quotes, Markdown links and tables, autolinks
+# (URLs, an e-mail address, a mention, issue references), a newline and a
+# right-to-left override.
 INJECT_UA = (
     "<script>alert(\"ua\")</script> 'q' | [x](http://evil.example) www.evil.example "
-    "a@evil.example `code` <img src=x onerror=alert(1)>\nnext line ‮evil"
+    "a@evil.example (@evil-user, evil/repo#1, GH-1) `code` <img src=x onerror=alert(1)>"
+    "\nnext line ‮evil"
 )
 INJECT_NAME = 'Describe<script>alert(1)</script>"Things|'
 SECTIONS = (
@@ -469,8 +471,39 @@ def test_markdown_escapes_untrusted_fields(written: dict) -> None:
     )
     # Values appear as text, with their angle brackets as entities.
     assert "&lt;script&gt;alert(&quot;ua&quot;)&lt;/script&gt;" in html
-    assert "[x](http://evil.example) www.evil.example a@evil.example `code`" in html
+    assert (
+        "[x](http://evil.example) www.evil.example <code>a@evil.example</code> "
+        "(<code>@evil-user</code>, <code>evil/repo#1</code>, <code>GH-1</code>) `code`"
+    ) in html
     assert "Describe&lt;script&gt;alert(1)&lt;/script&gt;&quot;Things|" in html
+
+
+_LINKABLE = re.compile(r"@|#[0-9]|(?i:gh)-[0-9]")
+
+
+def _linkable_outside_code(md: str) -> list[str]:
+    """Rendered text with an e-mail address, mention or issue reference outside a
+    code span. GitHub links these even when escaped, but not in code spans;
+    markdown-it-py does not link them at all, so only their place is testable."""
+    _, tokens = _render_gfm(md)
+    texts = (
+        "".join("\0" if c.type == "code_inline" else c.content for c in t.children or [])
+        for t in tokens
+    )
+    return [text for text in texts if _LINKABLE.search(text)]
+
+
+def _code_spans(md: str) -> list[str]:
+    _, tokens = _render_gfm(md)
+    return [c.content for t in tokens for c in t.children or [] if c.type == "code_inline"]
+
+
+def test_markdown_puts_linkable_values_in_code_spans(written: dict) -> None:
+    assert _linkable_outside_code(written["md"]) == []
+    # In the code span, the value is as logged.
+    spans = _code_spans(written["md"])
+    for value in ("a@evil.example", "@evil-user", "evil/repo#1", "GH-1"):
+        assert value in spans
 
 
 def test_markdown_values_cannot_break_table_rows(written: dict) -> None:
@@ -495,7 +528,17 @@ def test_markdown_values_cannot_break_table_rows(written: dict) -> None:
         ("a|b", "a\\|b"),
         ("[x](http://e.example)", "\\[x\\]\\(http\\://e\\.example\\)"),
         ("www.e.example", "www\\.e\\.example"),
-        ("a@b.example", "a\\@b\\.example"),
+        ("a@b.example", "`a@b.example`"),
+        ("by @octocat.", "by `@octocat`."),
+        ("(o/r#1, GH-2) #3", "\\(`o/r#1`, `GH-2`\\) `#3`"),
+        ("#a # 1", "\\#a \\# 1"),
+        ("a|b@c`d", "a\\|`b@c`\\`d"),
+        ("`x@y`", "\\``x@y`\\`"),
+        (
+            "arn:aws:sts::111122223333:assumed-role/r/a@b",
+            "`arn:aws:sts::111122223333:assumed-role/r/a@b`",
+        ),
+        ("1. a@b", "1\\. `a@b`"),
         ("s3.amazonaws.com", "s3\\.amazonaws\\.com"),
         ("203.0.113.10 aws-cli/2.0", "203.0.113.10 aws-cli/2.0"),
         ("<b>&amp;", "\\<b\\>\\&amp;"),
@@ -511,12 +554,15 @@ def test_markdown_values_cannot_break_table_rows(written: dict) -> None:
 )
 def test_md_escape(value: str, expected: str) -> None:
     assert md_escape(value) == expected
+    # As text and in a table cell (GitHub parses a cell's code spans separately).
+    escaped = md_escape(value)
+    assert _linkable_outside_code(f"{escaped}\n\n| v |\n|---|\n| {escaped} |\n") == []
 
 
 def test_templates_escape_every_value() -> None:
     # A minimal model whose every string is hostile; StrictUndefined makes any
     # field the templates expect but the model lacks fail loudly.
-    hostile = '<i x="1">|[l](http://x.example)'
+    hostile = '<i x="1">|[l](http://x.example) a@x.example @u o/r#1'
     model = {
         "kind": "findings",
         "title": hostile,
@@ -561,8 +607,10 @@ def test_templates_escape_every_value() -> None:
     }
     html = render_html(model)
     assert '<i x="1">' not in html and "&lt;i x=&#34;1&#34;&gt;" in html
-    rendered, _ = _render_gfm(render_markdown(model))
+    md = render_markdown(model)
+    rendered, _ = _render_gfm(md)
     assert "<i" not in rendered and "<a " not in rendered
+    assert _linkable_outside_code(md) == []
 
 
 # --- datasets and anonymised IPs ---------------------------------------------------
